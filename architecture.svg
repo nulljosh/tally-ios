@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 320" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif">
+  <rect width="800" height="320" fill="#0c1220" rx="12"/>
+
+  <!-- Title -->
+  <text x="400" y="36" text-anchor="middle" fill="#4e9cd7" font-size="13" font-weight="600" letter-spacing="0.12em" text-transform="uppercase">TALLY IOS ARCHITECTURE</text>
+
+  <!-- Box: SwiftUI Views -->
+  <rect x="40" y="70" width="160" height="180" rx="10" fill="none" stroke="#1a5a96" stroke-width="2"/>
+  <text x="120" y="96" text-anchor="middle" fill="#4e9cd7" font-size="11" font-weight="700" letter-spacing="0.08em">SWIFTUI VIEWS</text>
+  <text x="120" y="120" text-anchor="middle" fill="#c0cfe0" font-size="11">DashboardView</text>
+  <text x="120" y="140" text-anchor="middle" fill="#c0cfe0" font-size="11">ReportsView</text>
+  <text x="120" y="160" text-anchor="middle" fill="#c0cfe0" font-size="11">SettingsView</text>
+  <text x="120" y="180" text-anchor="middle" fill="#c0cfe0" font-size="11">LoginSheet</text>
+  <text x="120" y="200" text-anchor="middle" fill="#c0cfe0" font-size="11">ContentView</text>
+  <text x="120" y="220" text-anchor="middle" fill="#8a9ebc" font-size="10">@Observable</text>
+  <text x="120" y="236" text-anchor="middle" fill="#8a9ebc" font-size="10">environment</text>
+
+  <!-- Arrow: Views -> AppState -->
+  <line x1="200" y1="160" x2="248" y2="160" stroke="#2472b2" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- Box: AppState -->
+  <rect x="250" y="70" width="160" height="180" rx="10" fill="none" stroke="#1a5a96" stroke-width="2"/>
+  <text x="330" y="96" text-anchor="middle" fill="#4e9cd7" font-size="11" font-weight="700" letter-spacing="0.08em">APPSTATE</text>
+  <text x="330" y="118" text-anchor="middle" fill="#c0cfe0" font-size="11">dashboard</text>
+  <text x="330" y="138" text-anchor="middle" fill="#c0cfe0" font-size="11">isLoggedIn</text>
+  <text x="330" y="158" text-anchor="middle" fill="#c0cfe0" font-size="11">sessionExpiry</text>
+  <text x="330" y="178" text-anchor="middle" fill="#c0cfe0" font-size="11">daysUntilPayment</text>
+  <text x="330" y="200" text-anchor="middle" fill="#8a9ebc" font-size="10">login / logout</text>
+  <text x="330" y="216" text-anchor="middle" fill="#8a9ebc" font-size="10">loadDashboard</text>
+  <text x="330" y="232" text-anchor="middle" fill="#8a9ebc" font-size="10">refreshData</text>
+
+  <!-- Arrow: AppState -> TallyAPI -->
+  <line x1="410" y1="160" x2="458" y2="160" stroke="#2472b2" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- Box: TallyAPI -->
+  <rect x="460" y="70" width="160" height="180" rx="10" fill="none" stroke="#1a5a96" stroke-width="2"/>
+  <text x="540" y="96" text-anchor="middle" fill="#4e9cd7" font-size="11" font-weight="700" letter-spacing="0.08em">TALLYAPI</text>
+  <text x="540" y="118" text-anchor="middle" fill="#c0cfe0" font-size="11">URLSession</text>
+  <text x="540" y="138" text-anchor="middle" fill="#c0cfe0" font-size="11">Cookie jar</text>
+  <text x="540" y="158" text-anchor="middle" fill="#c0cfe0" font-size="11">login / logout</text>
+  <text x="540" y="178" text-anchor="middle" fill="#c0cfe0" font-size="11">fetchLatest</text>
+  <text x="540" y="198" text-anchor="middle" fill="#c0cfe0" font-size="11">submitReport</text>
+  <text x="540" y="218" text-anchor="middle" fill="#c0cfe0" font-size="11">refreshData</text>
+  <text x="540" y="238" text-anchor="middle" fill="#8a9ebc" font-size="10">401 -> re-auth</text>
+
+  <!-- Arrow: TallyAPI -> Vercel -->
+  <line x1="620" y1="160" x2="668" y2="160" stroke="#2472b2" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- Box: Vercel Backend -->
+  <rect x="670" y="70" width="100" height="100" rx="10" fill="none" stroke="#1a5a96" stroke-width="2"/>
+  <text x="720" y="96" text-anchor="middle" fill="#4e9cd7" font-size="11" font-weight="700" letter-spacing="0.06em">VERCEL</text>
+  <text x="720" y="116" text-anchor="middle" fill="#c0cfe0" font-size="10">/api/login</text>
+  <text x="720" y="133" text-anchor="middle" fill="#c0cfe0" font-size="10">/api/latest</text>
+  <text x="720" y="150" text-anchor="middle" fill="#c0cfe0" font-size="10">/api/check</text>
+
+  <!-- Arrow: Vercel -> BC Self-Serve -->
+  <line x1="720" y1="170" x2="720" y2="208" stroke="#2472b2" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- Box: BC Self-Serve -->
+  <rect x="660" y="210" width="120" height="50" rx="10" fill="none" stroke="#2472b2" stroke-width="1.5"/>
+  <text x="720" y="232" text-anchor="middle" fill="#4e9cd7" font-size="10" font-weight="700">BC SELF-SERVE</text>
+  <text x="720" y="250" text-anchor="middle" fill="#8a9ebc" font-size="10">Puppeteer scrape</text>
+
+  <!-- Session Cookie label -->
+  <text x="540" y="270" text-anchor="middle" fill="#8a9ebc" font-size="10" font-style="italic">Session cookie (2 hr)</text>
+
+  <!-- Arrow marker -->
+  <defs>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#2472b2"/>
+    </marker>
+  </defs>
+</svg>

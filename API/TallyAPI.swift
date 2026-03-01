@@ -26,10 +26,18 @@ enum TallyAPIError: Error, LocalizedError {
 final class TallyAPI: @unchecked Sendable {
     static let shared = TallyAPI()
 
-    private let baseURL = URL(string: "https://tally.heyitsmejosh.com")!
+    private let baseURL: URL
+
+    private static func makeBaseURL() -> URL {
+        guard let url = URL(string: "https://tally.heyitsmejosh.com") else {
+            fatalError("Invalid base URL for TallyAPI")
+        }
+        return url
+    }
     private let session: URLSession
 
     private init() {
+        self.baseURL = Self.makeBaseURL()
         let config = URLSessionConfiguration.default
         config.httpCookieAcceptPolicy = .always
         config.httpShouldSetCookies = true

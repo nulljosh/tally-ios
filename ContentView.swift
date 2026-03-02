@@ -89,17 +89,16 @@ struct DashboardView: View {
             Text(appState.dashboard?.income ?? "$0.00")
                 .font(.system(size: 64, weight: .bold, design: .monospaced))
                 .contentTransition(.numericText())
-            if let days = appState.daysUntilPayment {
-                Text("\(days) day\(days == 1 ? "" : "s") away")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            } else {
-                Text("-- days")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
+            Text(daysAwayLabel)
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
         .padding(.top, 24)
+    }
+
+    private var daysAwayLabel: String {
+        guard let days = appState.daysUntilPayment else { return "-- days" }
+        return "\(days) day\(days == 1 ? "" : "s") away"
     }
 
     private var infoCard: some View {
@@ -130,18 +129,15 @@ struct DashboardView: View {
         let today = Date()
         var comps = calendar.dateComponents([.year, .month], from: today)
         comps.day = 25
-        if let base = calendar.date(from: comps), base <= today,
-           let next = calendar.date(byAdding: .month, value: 1, to: base) {
-            let fmt = DateFormatter()
-            fmt.dateFormat = "MMM 25"
-            return fmt.string(from: next) + " (\(days)d)"
-        }
-        if let base = calendar.date(from: comps) {
-            let fmt = DateFormatter()
-            fmt.dateFormat = "MMM 25"
-            return fmt.string(from: base) + " (\(days)d)"
-        }
-        return "\(days) days"
+        guard let base = calendar.date(from: comps) else { return "\(days) days" }
+
+        let paymentDate = base <= today
+            ? calendar.date(byAdding: .month, value: 1, to: base) ?? base
+            : base
+
+        let fmt = DateFormatter()
+        fmt.dateFormat = "MMM 25"
+        return "\(fmt.string(from: paymentDate)) (\(days)d)"
     }
 
     private func messagesCard(messages: [Dashboard.Message]) -> some View {
@@ -152,7 +148,7 @@ struct DashboardView: View {
                 .padding(.horizontal)
                 .padding(.bottom, 8)
             VStack(spacing: 0) {
-                ForEach(messages, id: \.stableId) { msg in
+                ForEach(messages) { msg in
                     VStack(alignment: .leading, spacing: 4) {
                         HStack {
                             Text(msg.subject ?? "No subject")
@@ -172,7 +168,7 @@ struct DashboardView: View {
                     }
                     .padding(.vertical, 10)
                     .padding(.horizontal)
-                    if msg.stableId != messages.last?.stableId {
+                    if msg.id != messages.last?.id {
                         Divider().padding(.leading)
                     }
                 }

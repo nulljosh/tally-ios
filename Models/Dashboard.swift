@@ -9,11 +9,19 @@ struct Dashboard: Codable, Sendable {
     let tableData: String?
 
     struct Message: Codable, Identifiable, Sendable {
-        let id: String?
         let subject: String?
         let date: String?
         let body: String?
 
-        var stableId: String { id ?? (subject ?? "unknown") }
+        var id: String { rawId ?? subject ?? "unknown" }
+
+        private let rawId: String?
+
+        private enum CodingKeys: String, CodingKey {
+            case rawId = "id"
+            case subject
+            case date
+            case body
+        }
     }
 }

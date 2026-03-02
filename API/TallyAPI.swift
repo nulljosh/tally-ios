@@ -26,29 +26,21 @@ enum TallyAPIError: Error, LocalizedError {
 final class TallyAPI: @unchecked Sendable {
     static let shared = TallyAPI()
 
-    private let baseURL: URL
-
-    private static func makeBaseURL() -> URL {
-        guard let url = URL(string: "https://tally.heyitsmejosh.com") else {
-            fatalError("Invalid base URL for TallyAPI")
-        }
-        return url
-    }
+    // swiftlint:disable:next force_unwrapping
+    private static let baseURL = URL(string: "https://tally.heyitsmejosh.com")!
     private let session: URLSession
 
     private init() {
-        self.baseURL = Self.makeBaseURL()
         let config = URLSessionConfiguration.default
         config.httpCookieAcceptPolicy = .always
         config.httpShouldSetCookies = true
-        config.httpCookieStorage = HTTPCookieStorage.shared
         self.session = URLSession(configuration: config)
     }
 
     // MARK: - Auth
 
     func login(username: String, password: String) async throws -> Bool {
-        let url = baseURL.appendingPathComponent("api/login")
+        let url = Self.baseURL.appendingPathComponent("api/login")
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -61,7 +53,7 @@ final class TallyAPI: @unchecked Sendable {
     }
 
     func logout() async throws {
-        let url = baseURL.appendingPathComponent("api/logout")
+        let url = Self.baseURL.appendingPathComponent("api/logout")
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         _ = try await perform(request)
@@ -70,7 +62,7 @@ final class TallyAPI: @unchecked Sendable {
     // MARK: - Data
 
     func fetchLatest() async throws -> Dashboard {
-        let url = baseURL.appendingPathComponent("api/latest")
+        let url = Self.baseURL.appendingPathComponent("api/latest")
         let request = URLRequest(url: url)
         let (data, _) = try await perform(request)
         do {
@@ -81,7 +73,7 @@ final class TallyAPI: @unchecked Sendable {
     }
 
     func submitReport() async throws -> Bool {
-        let url = baseURL.appendingPathComponent("api/submit-report")
+        let url = Self.baseURL.appendingPathComponent("api/submit-report")
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -92,7 +84,7 @@ final class TallyAPI: @unchecked Sendable {
 
     func refreshData() async throws -> Dashboard {
         // Trigger fresh scrape (slow — Puppeteer on backend)
-        let checkURL = baseURL.appendingPathComponent("api/check")
+        let checkURL = Self.baseURL.appendingPathComponent("api/check")
         let checkRequest = URLRequest(url: checkURL)
         _ = try await perform(checkRequest)
 

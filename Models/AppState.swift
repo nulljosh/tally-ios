@@ -4,6 +4,8 @@ import Observation
 @Observable
 @MainActor
 final class AppState {
+    static let sessionExpiredMessage = "Session expired. Please sign in again."
+
     var dashboard: Dashboard?
     var isLoggedIn: Bool = false
     var showLogin: Bool = false
@@ -11,28 +13,23 @@ final class AppState {
     var error: String?
     var sessionExpiry: Date?
 
-    // Computed from nextPaymentDate -- payment always on the 25th
+    // Payment always lands on the 25th
     var daysUntilPayment: Int? {
         let calendar = Calendar.current
         let today = Date()
-        let components = calendar.dateComponents([.year, .month], from: today)
-        guard var comps = Optional(components) else { return nil }
-
-        // Target the 25th of current month; if past, next month
+        var comps = calendar.dateComponents([.year, .month], from: today)
         comps.day = 25
         guard let target25 = calendar.date(from: comps) else { return nil }
 
         let paymentDate: Date
         if target25 <= today {
-            // Roll to next month
             guard let nextMonth = calendar.date(byAdding: .month, value: 1, to: target25) else { return nil }
             paymentDate = nextMonth
         } else {
             paymentDate = target25
         }
 
-        let diff = calendar.dateComponents([.day], from: today, to: paymentDate)
-        return diff.day
+        return calendar.dateComponents([.day], from: today, to: paymentDate).day
     }
 
     var isSessionValid: Bool {
@@ -43,6 +40,7 @@ final class AppState {
     func login(username: String, password: String) async {
         isLoading = true
         error = nil
+        defer { isLoading = false }
         do {
             let success = try await TallyAPI.shared.login(username: username, password: password)
             if success {
@@ -56,21 +54,16 @@ final class AppState {
         } catch {
             self.error = error.localizedDescription
         }
-        isLoading = false
     }
 
     func logout() async {
         isLoading = true
-        do {
-            try await TallyAPI.shared.logout()
-        } catch {
-            // Best effort
-        }
+        defer { isLoading = false }
+        try? await TallyAPI.shared.logout()
         isLoggedIn = false
         showLogin = true
         dashboard = nil
         sessionExpiry = nil
-        isLoading = false
     }
 
     func loadDashboard() async {
@@ -80,16 +73,14 @@ final class AppState {
         }
         isLoading = true
         error = nil
+        defer { isLoading = false }
         do {
             dashboard = try await TallyAPI.shared.fetchLatest()
         } catch TallyAPIError.unauthorized {
-            isLoggedIn = false
-            showLogin = true
-            error = "Session expired. Please sign in again."
+            handleSessionExpired()
         } catch {
             self.error = error.localizedDescription
         }
-        isLoading = false
     }
 
     func refreshData() async {
@@ -99,17 +90,15 @@ final class AppState {
         }
         isLoading = true
         error = nil
+        defer { isLoading = false }
         do {
             dashboard = try await TallyAPI.shared.refreshData()
             sessionExpiry = Date().addingTimeInterval(2 * 60 * 60)
         } catch TallyAPIError.unauthorized {
-            isLoggedIn = false
-            showLogin = true
-            error = "Session expired. Please sign in again."
+            handleSessionExpired()
         } catch {
             self.error = error.localizedDescription
         }
-        isLoading = false
     }
 
     func submitReport() async -> Bool {
@@ -123,9 +112,7 @@ final class AppState {
         do {
             return try await TallyAPI.shared.submitReport()
         } catch TallyAPIError.unauthorized {
-            isLoggedIn = false
-            showLogin = true
-            error = "Session expired. Please sign in again."
+            handleSessionExpired()
             return false
         } catch {
             self.error = error.localizedDescription
@@ -134,11 +121,15 @@ final class AppState {
     }
 
     func checkSessionExpiry() {
-        guard isLoggedIn else { return }
-        if !isSessionValid {
-            isLoggedIn = false
-            showLogin = true
-            error = "Session expired. Please sign in again."
-        }
+        guard isLoggedIn, !isSessionValid else { return }
+        handleSessionExpired()
+    }
+
+    // MARK: - Private
+
+    private func handleSessionExpired() {
+        isLoggedIn = false
+        showLogin = true
+        error = Self.sessionExpiredMessage
     }
 }

@@ -1,6 +1,14 @@
+<div align="center">
+
 # Tally iOS
 
-iOS companion app for [Tally](https://github.com/nulljosh/tally), the BC benefits tracker.
+<img src="icon.svg" alt="Tally iOS" width="120" />
+
+iOS companion for [Tally](https://github.com/nulljosh/tally), the BC benefits tracker.
+
+</div>
+
+## Architecture
 
 ![Architecture](architecture.svg)
 

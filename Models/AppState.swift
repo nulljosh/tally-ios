@@ -106,7 +106,15 @@ final class AppState {
                 KeychainHelper.saveCredentials(username: username, password: password)
             }
 
-            try await loadLatestData()
+            do {
+                try await loadLatestData()
+            } catch {
+                if dashboard != nil {
+                    errorMessage = "Connected. Showing last saved dashboard data."
+                } else {
+                    errorMessage = error.localizedDescription
+                }
+            }
         } catch {
             isAuthenticated = false
             errorMessage = error.localizedDescription
@@ -149,6 +157,26 @@ final class AppState {
             dashboard = fresh
             cacheDashboard(fresh)
             errorMessage = nil
+        } catch APIClientError.unauthorized {
+            isAuthenticated = false
+            errorMessage = APIClientError.unauthorized.localizedDescription
+        } catch {
+            if dashboard != nil {
+                errorMessage = "Offline. Showing last saved data."
+            } else {
+                errorMessage = error.localizedDescription
+            }
+        }
+    }
+
+    func loadDashboardIfNeeded() async {
+        guard isAuthenticated, dashboard == nil else { return }
+
+        isLoading = true
+        defer { isLoading = false }
+
+        do {
+            try await loadLatestData()
         } catch APIClientError.unauthorized {
             isAuthenticated = false
             errorMessage = APIClientError.unauthorized.localizedDescription

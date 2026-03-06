@@ -8,9 +8,6 @@ struct TallyApp: App {
         WindowGroup {
             ContentView()
                 .environment(appState)
-                .onAppear {
-                    appState.checkSessionExpiry()
-                }
         }
     }
 }

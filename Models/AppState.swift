@@ -5,6 +5,20 @@ import Observation
 @MainActor
 final class AppState {
     static let sessionExpiredMessage = "Session expired. Please sign in again."
+    private static let paymentDayByMonth: [Int: Int] = [
+        1: 21,
+        2: 25,
+        3: 25,
+        4: 22,
+        5: 27,
+        6: 24,
+        7: 29,
+        8: 26,
+        9: 23,
+        10: 21,
+        11: 18,
+        12: 16
+    ]
 
     var dashboard: Dashboard?
     var isLoggedIn: Bool = false
@@ -13,22 +27,32 @@ final class AppState {
     var error: String?
     var sessionExpiry: Date?
 
-    // Payment always lands on the 25th
-    var daysUntilPayment: Int? {
+    var nextPaymentDate: Date? {
         let calendar = Calendar.current
-        let today = Date()
-        var comps = calendar.dateComponents([.year, .month], from: today)
-        comps.day = 25
-        guard let target25 = calendar.date(from: comps) else { return nil }
+        let today = calendar.startOfDay(for: Date())
+        var current = calendar.dateComponents([.year, .month], from: today)
+        guard let currentMonth = current.month,
+              let currentDay = Self.paymentDayByMonth[currentMonth] else { return nil }
 
-        let paymentDate: Date
-        if target25 <= today {
-            guard let nextMonth = calendar.date(byAdding: .month, value: 1, to: target25) else { return nil }
-            paymentDate = nextMonth
-        } else {
-            paymentDate = target25
+        current.day = currentDay
+        guard let currentMonthPayment = calendar.date(from: current) else { return nil }
+        if currentMonthPayment > today {
+            return currentMonthPayment
         }
 
+        guard let nextMonthDate = calendar.date(byAdding: .month, value: 1, to: today) else { return nil }
+        var next = calendar.dateComponents([.year, .month], from: nextMonthDate)
+        guard let nextMonth = next.month,
+              let nextDay = Self.paymentDayByMonth[nextMonth] else { return nil }
+
+        next.day = nextDay
+        return calendar.date(from: next)
+    }
+
+    var daysUntilPayment: Int? {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        guard let paymentDate = nextPaymentDate else { return nil }
         return calendar.dateComponents([.day], from: today, to: paymentDate).day
     }
 

@@ -124,19 +124,10 @@ struct DashboardView: View {
     }
 
     private var nextPaymentLabel: String {
-        guard let days = appState.daysUntilPayment else { return "--" }
-        let calendar = Calendar.current
-        let today = Date()
-        var comps = calendar.dateComponents([.year, .month], from: today)
-        comps.day = 25
-        guard let base = calendar.date(from: comps) else { return "\(days) days" }
-
-        let paymentDate = base <= today
-            ? calendar.date(byAdding: .month, value: 1, to: base) ?? base
-            : base
-
+        guard let days = appState.daysUntilPayment,
+              let paymentDate = appState.nextPaymentDate else { return "--" }
         let fmt = DateFormatter()
-        fmt.dateFormat = "MMM 25"
+        fmt.dateFormat = "MMM d"
         return "\(fmt.string(from: paymentDate)) (\(days)d)"
     }
 

@@ -1,159 +1,193 @@
 import Foundation
+import Network
 import Observation
 
 @Observable
 @MainActor
 final class AppState {
-    static let sessionExpiredMessage = "Session expired. Please sign in again."
-    private static let paymentDayByMonth: [Int: Int] = [
-        1: 21,
-        2: 25,
-        3: 25,
-        4: 22,
-        5: 27,
-        6: 24,
-        7: 29,
-        8: 26,
-        9: 23,
-        10: 21,
-        11: 18,
-        12: 16
-    ]
+    private enum Constants {
+        static let dashboardCacheKey = "cached-dashboard-data"
+    }
 
-    var dashboard: Dashboard?
-    var isLoggedIn: Bool = false
-    var showLogin: Bool = false
-    var isLoading: Bool = false
-    var error: String?
-    var sessionExpiry: Date?
+    var isAuthenticated = false
+    var isLoading = false
+    var errorMessage: String?
+    var dashboard: DashboardData?
+    var isOffline = false
 
-    var nextPaymentDate: Date? {
-        let calendar = Calendar.current
-        let today = calendar.startOfDay(for: Date())
-        var current = calendar.dateComponents([.year, .month], from: today)
-        guard let currentMonth = current.month,
-              let currentDay = Self.paymentDayByMonth[currentMonth] else { return nil }
+    private let monitor = NWPathMonitor()
+    private let monitorQueue = DispatchQueue(label: "com.heyitsmejosh.tally.network")
 
-        current.day = currentDay
-        guard let currentMonthPayment = calendar.date(from: current) else { return nil }
-        if currentMonthPayment > today {
-            return currentMonthPayment
+    init() {
+        startNetworkMonitoring()
+        loadCachedDashboard()
+    }
+
+    deinit {
+        monitor.cancel()
+    }
+
+    var paymentAmountText: String {
+        dashboard?.paymentAmount ?? "$0.00"
+    }
+
+    var statusMessages: [String] {
+        dashboard?.statusMessages ?? []
+    }
+
+    var nextPaymentDateText: String {
+        guard let date = parsedNextPaymentDate else { return "--" }
+        return date.formatted(date: .abbreviated, time: .omitted)
+    }
+
+    var countdownText: String {
+        guard let date = parsedNextPaymentDate else { return "--" }
+        let start = Calendar.current.startOfDay(for: Date())
+        let end = Calendar.current.startOfDay(for: date)
+        let days = Calendar.current.dateComponents([.day], from: start, to: end).day ?? 0
+
+        if days < 0 {
+            return "Payment date passed"
+        }
+        if days == 0 {
+            return "Today"
+        }
+        return "\(days) day\(days == 1 ? "" : "s")"
+    }
+
+    private var parsedNextPaymentDate: Date? {
+        guard let raw = dashboard?.nextPaymentDate, !raw.isEmpty else { return nil }
+
+        let isoFormatter = ISO8601DateFormatter()
+        if let isoDate = isoFormatter.date(from: raw) {
+            return isoDate
         }
 
-        guard let nextMonthDate = calendar.date(byAdding: .month, value: 1, to: today) else { return nil }
-        var next = calendar.dateComponents([.year, .month], from: nextMonthDate)
-        guard let nextMonth = next.month,
-              let nextDay = Self.paymentDayByMonth[nextMonth] else { return nil }
+        let dateFormatter = DateFormatter()
+        dateFormatter.locale = Locale(identifier: "en_US_POSIX")
 
-        next.day = nextDay
-        return calendar.date(from: next)
-    }
-
-    var daysUntilPayment: Int? {
-        let calendar = Calendar.current
-        let today = calendar.startOfDay(for: Date())
-        guard let paymentDate = nextPaymentDate else { return nil }
-        return calendar.dateComponents([.day], from: today, to: paymentDate).day
-    }
-
-    var isSessionValid: Bool {
-        guard let expiry = sessionExpiry else { return false }
-        return expiry > Date()
-    }
-
-    func login(username: String, password: String) async {
-        isLoading = true
-        error = nil
-        defer { isLoading = false }
-        do {
-            let success = try await TallyAPI.shared.login(username: username, password: password)
-            if success {
-                isLoggedIn = true
-                showLogin = false
-                sessionExpiry = Date().addingTimeInterval(2 * 60 * 60)
-                await loadDashboard()
-            } else {
-                error = "Login failed. Check your credentials."
+        let formats = ["yyyy-MM-dd", "yyyy/MM/dd", "MMM d, yyyy"]
+        for format in formats {
+            dateFormatter.dateFormat = format
+            if let date = dateFormatter.date(from: raw) {
+                return date
             }
+        }
+
+        return nil
+    }
+
+    func bootstrap() async {
+        if let credentials = KeychainHelper.loadCredentials() {
+            await login(username: credentials.username, password: credentials.password, storeCredentials: false)
+            return
+        }
+
+        if dashboard == nil {
+            errorMessage = "Please sign in to load your dashboard."
+        }
+    }
+
+    func login(username: String, password: String, storeCredentials: Bool = true) async {
+        isLoading = true
+        errorMessage = nil
+        defer { isLoading = false }
+
+        do {
+            let response = try await APIClient.shared.login(username: username, password: password)
+            guard response.success else {
+                isAuthenticated = false
+                errorMessage = "Login failed. Check your username/password."
+                return
+            }
+
+            isAuthenticated = true
+            if storeCredentials {
+                KeychainHelper.saveCredentials(username: username, password: password)
+            }
+
+            try await loadLatestData()
         } catch {
-            self.error = error.localizedDescription
+            isAuthenticated = false
+            errorMessage = error.localizedDescription
         }
     }
 
     func logout() async {
         isLoading = true
         defer { isLoading = false }
-        try? await TallyAPI.shared.logout()
-        isLoggedIn = false
-        showLogin = true
-        dashboard = nil
-        sessionExpiry = nil
+
+        try? await APIClient.shared.logout()
+        isAuthenticated = false
+        KeychainHelper.clearCredentials()
+        clearCookies()
     }
 
-    func loadDashboard() async {
-        guard isLoggedIn else {
-            showLogin = true
+    func loadLatestData() async throws {
+        do {
+            let latest = try await APIClient.shared.latest()
+            dashboard = latest
+            cacheDashboard(latest)
+            errorMessage = nil
+        } catch {
+            if let cached = dashboard {
+                dashboard = cached
+                errorMessage = "Showing cached data."
+            }
+            throw error
+        }
+    }
+
+    func refreshDashboard() async {
+        guard isAuthenticated else { return }
+
+        isLoading = true
+        defer { isLoading = false }
+
+        do {
+            let fresh = try await APIClient.shared.check()
+            dashboard = fresh
+            cacheDashboard(fresh)
+            errorMessage = nil
+        } catch APIClientError.unauthorized {
+            isAuthenticated = false
+            errorMessage = APIClientError.unauthorized.localizedDescription
+        } catch {
+            if dashboard != nil {
+                errorMessage = "Offline. Showing last saved data."
+            } else {
+                errorMessage = error.localizedDescription
+            }
+        }
+    }
+
+    private func startNetworkMonitoring() {
+        monitor.pathUpdateHandler = { [weak self] path in
+            Task { @MainActor in
+                self?.isOffline = path.status != .satisfied
+            }
+        }
+        monitor.start(queue: monitorQueue)
+    }
+
+    private func cacheDashboard(_ value: DashboardData) {
+        guard let data = try? JSONEncoder().encode(value) else { return }
+        UserDefaults.standard.set(data, forKey: Constants.dashboardCacheKey)
+    }
+
+    private func loadCachedDashboard() {
+        guard let data = UserDefaults.standard.data(forKey: Constants.dashboardCacheKey),
+              let decoded = try? JSONDecoder().decode(DashboardData.self, from: data) else {
             return
         }
-        isLoading = true
-        error = nil
-        defer { isLoading = false }
-        do {
-            dashboard = try await TallyAPI.shared.fetchLatest()
-        } catch TallyAPIError.unauthorized {
-            handleSessionExpired()
-        } catch {
-            self.error = error.localizedDescription
-        }
+
+        dashboard = decoded
     }
 
-    func refreshData() async {
-        guard isLoggedIn else {
-            showLogin = true
-            return
+    private func clearCookies() {
+        guard let cookies = HTTPCookieStorage.shared.cookies else { return }
+        for cookie in cookies {
+            HTTPCookieStorage.shared.deleteCookie(cookie)
         }
-        isLoading = true
-        error = nil
-        defer { isLoading = false }
-        do {
-            dashboard = try await TallyAPI.shared.refreshData()
-            sessionExpiry = Date().addingTimeInterval(2 * 60 * 60)
-        } catch TallyAPIError.unauthorized {
-            handleSessionExpired()
-        } catch {
-            self.error = error.localizedDescription
-        }
-    }
-
-    func submitReport() async -> Bool {
-        guard isLoggedIn else {
-            showLogin = true
-            return false
-        }
-        isLoading = true
-        error = nil
-        defer { isLoading = false }
-        do {
-            return try await TallyAPI.shared.submitReport()
-        } catch TallyAPIError.unauthorized {
-            handleSessionExpired()
-            return false
-        } catch {
-            self.error = error.localizedDescription
-            return false
-        }
-    }
-
-    func checkSessionExpiry() {
-        guard isLoggedIn, !isSessionValid else { return }
-        handleSessionExpired()
-    }
-
-    // MARK: - Private
-
-    private func handleSessionExpired() {
-        isLoggedIn = false
-        showLogin = true
-        error = Self.sessionExpiredMessage
     }
 }

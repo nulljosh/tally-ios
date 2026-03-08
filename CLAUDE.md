@@ -24,3 +24,9 @@ iOS companion for [Tally](https://github.com/nulljosh/tally). BC benefits tracke
 ```bash
 open TallyApp.swift  # Opens in Xcode
 ```
+
+## Quick Commands
+- `./scripts/simplify.sh`
+- `./scripts/monetize.sh . --write`
+- `./scripts/audit.sh .`
+- `./scripts/ship.sh .`

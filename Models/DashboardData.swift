@@ -1,9 +1,21 @@
 import Foundation
 
 struct DashboardData: Codable, Sendable {
+    struct StatusMessage: Codable, Identifiable, Sendable {
+        let id: String
+        let text: String
+        let timestamp: String?
+
+        init(id: String = UUID().uuidString, text: String, timestamp: String? = nil) {
+            self.id = id
+            self.text = text
+            self.timestamp = timestamp
+        }
+    }
+
     let paymentAmount: String?
     let nextPaymentDate: String?
-    let statusMessages: [String]
+    let statusMessages: [StatusMessage]
 
     enum CodingKeys: String, CodingKey {
         case paymentAmount = "payment_amount"
@@ -11,7 +23,7 @@ struct DashboardData: Codable, Sendable {
         case statusMessages = "messages"
     }
 
-    init(paymentAmount: String?, nextPaymentDate: String?, statusMessages: [String]) {
+    init(paymentAmount: String?, nextPaymentDate: String?, statusMessages: [StatusMessage]) {
         self.paymentAmount = paymentAmount
         self.nextPaymentDate = nextPaymentDate
         self.statusMessages = statusMessages
@@ -23,11 +35,16 @@ struct DashboardData: Codable, Sendable {
         nextPaymentDate = try container.decodeIfPresent(String.self, forKey: .nextPaymentDate)
 
         if let stringMessages = try? container.decode([String].self, forKey: .statusMessages) {
-            statusMessages = stringMessages
+            statusMessages = stringMessages.map { StatusMessage(text: $0) }
         } else if let objectMessages = try? container.decode([MessageObject].self, forKey: .statusMessages) {
             statusMessages = objectMessages.map { message in
-                [message.subject, message.body].compactMap { $0 }.joined(separator: " - ")
-            }.filter { !$0.isEmpty }
+                let text = [message.subject, message.body].compactMap { $0 }.joined(separator: " - ")
+                return StatusMessage(
+                    id: message.id ?? UUID().uuidString,
+                    text: text,
+                    timestamp: message.date
+                )
+            }.filter { !$0.text.isEmpty }
         } else {
             statusMessages = []
         }
@@ -35,6 +52,8 @@ struct DashboardData: Codable, Sendable {
 }
 
 private struct MessageObject: Codable {
+    let id: String?
     let subject: String?
     let body: String?
+    let date: String?
 }

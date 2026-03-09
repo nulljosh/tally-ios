@@ -7,7 +7,7 @@ struct ContentView: View {
         NavigationStack {
             Group {
                 if appState.isAuthenticated {
-                    DashboardScreen()
+                    AuthenticatedTabShell()
                 } else {
                     LoginScreen()
                 }
@@ -27,6 +27,46 @@ struct ContentView: View {
         .task {
             await appState.bootstrap()
         }
+    }
+}
+
+private struct AuthenticatedTabShell: View {
+    @Environment(AppState.self) private var appState
+
+    var body: some View {
+        TabView {
+            DashboardScreen()
+                .tabItem {
+                    Label("Dashboard", systemImage: "house")
+                }
+
+            GradesView()
+                .tabItem {
+                    Label("Grades", systemImage: "graduationcap")
+                }
+
+            DTCNavigatorView()
+                .tabItem {
+                    Label("DTC", systemImage: "accessibility")
+                }
+
+            ReportView()
+                .tabItem {
+                    Label("Reports", systemImage: "doc.text")
+                }
+
+            DisputeView()
+                .tabItem {
+                    Label("Dispute", systemImage: "scale.3d")
+                }
+
+            MessagesView()
+                .tabItem {
+                    Label("Messages", systemImage: "envelope")
+                }
+                .badge(appState.statusMessageItems.count)
+        }
+        .tint(Color.bcLightBlue)
     }
 }
 
@@ -178,11 +218,17 @@ private struct DashboardScreen: View {
                     .font(.subheadline)
                     .foregroundStyle(Color.white.opacity(0.7))
             } else {
-                ForEach(Array(appState.statusMessages.enumerated()), id: \.offset) { _, message in
-                    Text("• \(message)")
+                ForEach(appState.statusMessageItems.prefix(3)) { message in
+                    Text("• \(message.text)")
                         .font(.subheadline)
                         .foregroundStyle(Color.white.opacity(0.9))
                         .frame(maxWidth: .infinity, alignment: .leading)
+                }
+
+                if appState.statusMessageItems.count > 3 {
+                    Text("Open Messages tab for \(appState.statusMessageItems.count - 3) more")
+                        .font(.caption)
+                        .foregroundStyle(Color.white.opacity(0.65))
                 }
             }
 
@@ -213,25 +259,6 @@ private struct OfflineBanner: View {
         }
         .padding(12)
         .background(Color.bcMidBlue, in: RoundedRectangle(cornerRadius: 10))
-    }
-}
-
-private extension Color {
-    static let bcPrimaryBlue = Color(hex: "1a5a96")
-    static let bcMidBlue = Color(hex: "2472b2")
-    static let bcLightBlue = Color(hex: "4e9cd7")
-    static let navyBackground = Color(hex: "0c1220")
-
-    init(hex: String) {
-        let value = hex.hasPrefix("#") ? String(hex.dropFirst()) : hex
-        var rgb: UInt64 = 0
-        Scanner(string: value).scanHexInt64(&rgb)
-
-        self.init(
-            red: Double((rgb >> 16) & 0xFF) / 255,
-            green: Double((rgb >> 8) & 0xFF) / 255,
-            blue: Double(rgb & 0xFF) / 255
-        )
     }
 }
 

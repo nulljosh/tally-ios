@@ -1,0 +1,213 @@
+import SwiftUI
+
+struct ReportView: View {
+    private enum Constants {
+        static let lastSubmittedKey = "report-last-submitted-at"
+    }
+
+    @State private var sin = ""
+    @State private var phone = ""
+    @State private var pin = ""
+
+    @State private var previewText: String?
+    @State private var statusText: String?
+    @State private var statusIsError = false
+    @State private var lastSubmittedDate: Date?
+    @State private var isSubmitting = false
+    @State private var showSubmitConfirmation = false
+
+    var body: some View {
+        Form {
+            Section("Credentials") {
+                SecureField("SIN (9 digits)", text: $sin)
+                    .keyboardType(.numberPad)
+                    .onChange(of: sin) { _, newValue in
+                        sin = digitsOnly(from: newValue, maxCount: 9)
+                    }
+
+                TextField("Phone", text: $phone)
+                    .keyboardType(.phonePad)
+                    .onChange(of: phone) { _, newValue in
+                        phone = formatPhone(newValue)
+                    }
+
+                SecureField("PIN", text: $pin)
+                    .keyboardType(.numberPad)
+                    .onChange(of: pin) { _, newValue in
+                        pin = digitsOnly(from: newValue, maxCount: 12)
+                    }
+            }
+
+            Section("Actions") {
+                Button("Preview Report") {
+                    Task { await submit(dryRun: true) }
+                }
+                .disabled(!isFormValid || isSubmitting)
+
+                Button("Submit Report") {
+                    showSubmitConfirmation = true
+                }
+                .disabled(!isFormValid || isSubmitting)
+                .confirmationDialog("Submit monthly report now?", isPresented: $showSubmitConfirmation) {
+                    Button("Submit", role: .destructive) {
+                        Task { await submit(dryRun: false) }
+                    }
+                    Button("Cancel", role: .cancel) { }
+                }
+
+                if isSubmitting {
+                    HStack {
+                        ProgressView()
+                        Text("Submitting...")
+                    }
+                }
+            }
+
+            if let previewText, !previewText.isEmpty {
+                Section("Preview") {
+                    Text(previewText)
+                }
+            }
+
+            Section("Submission Status") {
+                if let statusText {
+                    Text(statusText)
+                        .foregroundStyle(statusIsError ? Color.gradeRed : Color.bcMidBlue)
+                }
+
+                Text(lastSubmittedLabel)
+                Text("Next deadline: \(nextDeadline.formatted(date: .complete, time: .omitted))")
+            }
+        }
+        .navigationTitle("Reports")
+        .scrollContentBackground(.hidden)
+        .background(Color.navyBackground)
+        .task {
+            loadSavedSecrets()
+            loadLastSubmittedDate()
+        }
+    }
+
+    private var isFormValid: Bool {
+        sin.count == 9 && !digitsOnly(from: phone, maxCount: 20).isEmpty && !pin.isEmpty
+    }
+
+    private var lastSubmittedLabel: String {
+        if let lastSubmittedDate {
+            return "Last submitted: \(lastSubmittedDate.formatted(date: .abbreviated, time: .shortened))"
+        }
+        return "Last submitted: Never"
+    }
+
+    private var nextDeadline: Date {
+        let calendar = Calendar.current
+        let now = Date()
+        let year = calendar.component(.year, from: now)
+        let month = calendar.component(.month, from: now)
+
+        let startOfThisMonth = calendar.date(from: DateComponents(year: year, month: month, day: 1)) ?? now
+        if now <= startOfThisMonth {
+            return startOfThisMonth
+        }
+
+        let nextMonth = calendar.date(byAdding: .month, value: 1, to: startOfThisMonth) ?? now
+        return nextMonth
+    }
+
+    private func loadSavedSecrets() {
+        if let savedSIN = KeychainHelper.loadReportSIN() {
+            sin = savedSIN
+        }
+        if let savedPIN = KeychainHelper.loadReportPIN() {
+            pin = savedPIN
+        }
+    }
+
+    private func loadLastSubmittedDate() {
+        if let timestamp = UserDefaults.standard.object(forKey: Constants.lastSubmittedKey) as? Date {
+            lastSubmittedDate = timestamp
+        }
+    }
+
+    @MainActor
+    private func submit(dryRun: Bool) async {
+        isSubmitting = true
+        defer { isSubmitting = false }
+
+        let request = ReportSubmissionRequest(
+            sin: sin,
+            phone: digitsOnly(from: phone, maxCount: 20),
+            pin: pin,
+            dryRun: dryRun
+        )
+
+        do {
+            let response = try await APIClient.shared.submitReport(request)
+            KeychainHelper.saveReportSIN(sin)
+            KeychainHelper.saveReportPIN(pin)
+
+            if dryRun {
+                previewText = response.preview ?? response.message ?? "Preview generated."
+                statusText = "Preview completed successfully."
+                statusIsError = false
+            } else {
+                let successful = response.success ?? true
+                if successful {
+                    let submittedDate = parseDate(response.submittedAt) ?? Date()
+                    lastSubmittedDate = submittedDate
+                    UserDefaults.standard.set(submittedDate, forKey: Constants.lastSubmittedKey)
+                    statusText = response.message ?? "Report submitted successfully."
+                    statusIsError = false
+                } else {
+                    statusText = response.error ?? response.message ?? "Submission failed."
+                    statusIsError = true
+                }
+            }
+        } catch {
+            statusText = error.localizedDescription
+            statusIsError = true
+        }
+    }
+
+    private func parseDate(_ value: String?) -> Date? {
+        guard let value else { return nil }
+
+        let iso = ISO8601DateFormatter()
+        if let date = iso.date(from: value) {
+            return date
+        }
+
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSZ"
+        return formatter.date(from: value)
+    }
+
+    private func digitsOnly(from value: String, maxCount: Int) -> String {
+        String(value.filter(\.isNumber).prefix(maxCount))
+    }
+
+    private func formatPhone(_ value: String) -> String {
+        let digits = digitsOnly(from: value, maxCount: 10)
+
+        if digits.count <= 3 {
+            return digits
+        }
+        if digits.count <= 6 {
+            let area = digits.prefix(3)
+            let rest = digits.dropFirst(3)
+            return "(\(area)) \(rest)"
+        }
+
+        let area = digits.prefix(3)
+        let mid = digits.dropFirst(3).prefix(3)
+        let last = digits.dropFirst(6)
+        return "(\(area)) \(mid)-\(last)"
+    }
+}
+
+#Preview {
+    NavigationStack {
+        ReportView()
+    }
+}

@@ -66,12 +66,25 @@ final class APIClient: @unchecked Sendable {
         try await send(path: "api/check", responseType: DashboardData.self)
     }
 
+    func grades() async throws -> SchoolGradesResponse {
+        try await send(path: "api/school/grades", responseType: SchoolGradesResponse.self)
+    }
+
     func dtcScreen(_ requestBody: DTCScreenRequest) async throws -> DTCScreenResult {
         try await send(
             path: "api/dtc/screen",
             method: "POST",
             body: requestBody,
             responseType: DTCScreenResult.self
+        )
+    }
+
+    func submitReport(_ requestBody: ReportSubmissionRequest) async throws -> ReportSubmissionResponse {
+        try await send(
+            path: "api/submit-report",
+            method: "POST",
+            body: requestBody,
+            responseType: ReportSubmissionResponse.self
         )
     }
 

@@ -72,6 +72,17 @@ final class TallyAPI: @unchecked Sendable {
         }
     }
 
+    func fetchGrades() async throws -> SchoolGradesResponse {
+        let url = Self.baseURL.appendingPathComponent("api/school/grades")
+        let request = URLRequest(url: url)
+        let (data, _) = try await perform(request)
+        do {
+            return try JSONDecoder().decode(SchoolGradesResponse.self, from: data)
+        } catch {
+            throw TallyAPIError.decodingError(error)
+        }
+    }
+
     func submitReport() async throws -> Bool {
         let url = Self.baseURL.appendingPathComponent("api/submit-report")
         var request = URLRequest(url: url)
@@ -80,6 +91,22 @@ final class TallyAPI: @unchecked Sendable {
         let (data, _) = try await perform(request)
         let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
         return json?["success"] as? Bool ?? false
+    }
+
+    func analyzeLegal(description: String) async throws -> LegalAnalysis {
+        let url = Self.baseURL.appendingPathComponent("api/legal")
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        let body = ["description": description]
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+        let (data, _) = try await perform(request)
+        do {
+            return try JSONDecoder().decode(LegalAnalysis.self, from: data)
+        } catch {
+            throw TallyAPIError.decodingError(error)
+        }
     }
 
     func refreshData() async throws -> Dashboard {

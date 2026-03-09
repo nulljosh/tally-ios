@@ -32,6 +32,10 @@ final class AppState {
     }
 
     var statusMessages: [String] {
+        dashboard?.statusMessages.map(\.text) ?? []
+    }
+
+    var statusMessageItems: [DashboardData.StatusMessage] {
         dashboard?.statusMessages ?? []
     }
 

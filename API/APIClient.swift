@@ -59,15 +59,26 @@ final class APIClient: @unchecked Sendable {
     }
 
     func latest() async throws -> DashboardData {
-        try await send(path: "api/latest", responseType: DashboardData.self)
+        try await send(path: "api/mobile", responseType: DashboardData.self)
     }
 
     func check() async throws -> DashboardData {
-        try await send(path: "api/check", responseType: DashboardData.self)
+        // Trigger fresh scrape, then fetch parsed mobile data
+        _ = try await send(path: "api/check", responseType: CheckResponse.self)
+        return try await send(path: "api/mobile", responseType: DashboardData.self)
     }
 
     func grades() async throws -> SchoolGradesResponse {
-        try await send(path: "api/school/grades", responseType: SchoolGradesResponse.self)
+        try await send(path: "api/mobile/grades", responseType: SchoolGradesResponse.self)
+    }
+
+    func analyzeLegal(description: String) async throws -> LegalAnalysis {
+        try await send(
+            path: "api/legal",
+            method: "POST",
+            body: LegalRequest(description: description),
+            responseType: LegalAnalysis.self
+        )
     }
 
     func dtcScreen(_ requestBody: DTCScreenRequest) async throws -> DTCScreenResult {
@@ -181,4 +192,12 @@ final class APIClient: @unchecked Sendable {
 private struct LoginRequest: Encodable {
     let username: String
     let password: String
+}
+
+private struct CheckResponse: Decodable {
+    let success: Bool?
+}
+
+private struct LegalRequest: Encodable {
+    let description: String
 }

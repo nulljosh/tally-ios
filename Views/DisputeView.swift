@@ -22,7 +22,7 @@ final class DisputeAnalysisState {
         defer { isLoading = false }
 
         do {
-            analysis = try await TallyAPI.shared.analyzeLegal(description: trimmed)
+            analysis = try await APIClient.shared.analyzeLegal(description: trimmed)
         } catch {
             analysis = nil
             errorMessage = error.localizedDescription
@@ -44,7 +44,6 @@ struct DisputeView: View {
                 }
                 .padding()
             }
-            .background(Color.navyBackground)
             .navigationTitle("Dispute")
         }
     }
@@ -53,14 +52,12 @@ struct DisputeView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Issue Description")
                 .font(.headline)
-                .foregroundStyle(.white)
 
             TextEditor(text: $state.descriptionText)
                 .frame(minHeight: 140)
                 .padding(8)
                 .scrollContentBackground(.hidden)
-                .background(Color.white.opacity(0.07), in: RoundedRectangle(cornerRadius: 14))
-                .foregroundStyle(.white)
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -79,7 +76,7 @@ struct DisputeView: View {
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 14)
-            .background(Color.bcPrimaryBlue, in: RoundedRectangle(cornerRadius: 12))
+            .background(Color.appleBlue, in: RoundedRectangle(cornerRadius: 12))
             .foregroundStyle(.white)
         }
         .disabled(!state.canAnalyze)
@@ -98,54 +95,46 @@ struct DisputeView: View {
 
     @ViewBuilder
     private var resultsSection: some View {
-        guard let analysis = state.analysis else { return }
-
+        if let analysis = state.analysis {
         VStack(alignment: .leading, spacing: 16) {
             Text("Categories")
                 .font(.headline)
-                .foregroundStyle(.white)
 
             ForEach(Array(analysis.categories.enumerated()), id: \.offset) { _, category in
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
                         Text(category.name)
                             .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.white)
                         Spacer()
                         Text(category.confidence.formatted(.percent.precision(.fractionLength(0))))
                             .font(.caption)
-                            .foregroundStyle(Color.white.opacity(0.7))
+                            .foregroundStyle(.secondary)
                     }
 
                     ProgressView(value: min(max(category.confidence, 0), 1))
-                        .tint(Color.bcLightBlue)
+                        .tint(Color.appleBlue)
 
                     Text(category.description)
                         .font(.caption)
-                        .foregroundStyle(Color.white.opacity(0.8))
+                        .foregroundStyle(.secondary)
                 }
-                .padding(12)
-                .background(Color.white.opacity(0.07), in: RoundedRectangle(cornerRadius: 12))
+                .glassCard()
             }
 
             Text("Next Steps")
                 .font(.headline)
-                .foregroundStyle(.white)
 
             VStack(alignment: .leading, spacing: 8) {
                 ForEach(Array(analysis.nextSteps.enumerated()), id: \.offset) { index, step in
                     Text("\(index + 1). \(step)")
                         .font(.subheadline)
-                        .foregroundStyle(Color.white.opacity(0.9))
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
-            .padding(12)
-            .background(Color.white.opacity(0.07), in: RoundedRectangle(cornerRadius: 12))
+            .glassCard()
 
             Text("Resources")
                 .font(.headline)
-                .foregroundStyle(.white)
 
             VStack(alignment: .leading, spacing: 10) {
                 ForEach(Array(analysis.resources.enumerated()), id: \.offset) { _, resource in
@@ -153,21 +142,20 @@ struct DisputeView: View {
                         if let url = URL(string: resource.url) {
                             Link(resource.name, destination: url)
                                 .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(Color.bcLightBlue)
+                                .foregroundStyle(Color.appleBlue)
                         } else {
                             Text(resource.name)
                                 .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(.white)
                         }
 
                         Text(resource.description)
                             .font(.caption)
-                            .foregroundStyle(Color.white.opacity(0.8))
+                            .foregroundStyle(.secondary)
                     }
                 }
             }
-            .padding(12)
-            .background(Color.white.opacity(0.07), in: RoundedRectangle(cornerRadius: 12))
+            .glassCard()
+        }
         }
     }
 }

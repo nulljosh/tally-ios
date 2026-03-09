@@ -1,0 +1,21 @@
+import SwiftUI
+
+struct SplashView: View {
+    var body: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "chart.bar.doc.horizontal")
+                .font(.system(size: 64))
+                .foregroundStyle(Color.appleBlue)
+
+            Text("Tally")
+                .font(.system(size: 38, weight: .bold, design: .rounded))
+                .foregroundStyle(.primary)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color(.systemBackground))
+    }
+}
+
+#Preview {
+    SplashView()
+}

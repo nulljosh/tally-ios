@@ -1,13 +1,13 @@
+import Foundation
 import SwiftUI
 
+// MARK: - Colors
+
 extension Color {
-    static let bcPrimaryBlue = Color(hex: "1a5a96")
-    static let bcMidBlue = Color(hex: "2472b2")
-    static let bcLightBlue = Color(hex: "4e9cd7")
-    static let navyBackground = Color(hex: "0c1220")
-    static let gradeGreen = Color(hex: "1f8f4a")
-    static let gradeAmber = Color(hex: "d18a00")
-    static let gradeRed = Color(hex: "c7362f")
+    static let appleBlue = Color(hex: "0071e3")
+    static let gradeGreen = Color(hex: "34c759")
+    static let gradeAmber = Color(hex: "ff9f0a")
+    static let gradeRed = Color(hex: "ff3b30")
 
     init(hex: String) {
         let value = hex.hasPrefix("#") ? String(hex.dropFirst()) : hex
@@ -20,4 +20,41 @@ extension Color {
             blue: Double(rgb & 0xFF) / 255
         )
     }
+}
+
+// MARK: - Glass Card
+
+struct GlassCard: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .padding(20)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20))
+    }
+}
+
+extension View {
+    func glassCard() -> some View { modifier(GlassCard()) }
+}
+
+// MARK: - Date Parsing
+
+enum DateParsing {
+    nonisolated(unsafe) private static let isoFormatter = ISO8601DateFormatter()
+    private static let fallbackFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSZ"
+        return f
+    }()
+
+    static func parse(_ value: String) -> Date? {
+        isoFormatter.date(from: value) ?? fallbackFormatter.date(from: value)
+    }
+}
+
+// MARK: - Animation
+
+extension Animation {
+    static let tallySpring = Animation.spring(response: 0.35, dampingFraction: 0.7)
 }

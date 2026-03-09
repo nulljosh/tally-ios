@@ -33,10 +33,9 @@ struct GradesView: View {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(course.name)
                                     .font(.headline)
-                                    .foregroundStyle(.white)
                                 Text("\(course.grade, specifier: "%.1f")%")
                                     .font(.subheadline)
-                                    .foregroundStyle(Color.white.opacity(0.75))
+                                    .foregroundStyle(.secondary)
                             }
 
                             Spacer()
@@ -49,8 +48,12 @@ struct GradesView: View {
                                 .foregroundStyle(.white)
                         }
                     }
-                    .tint(.white)
-                    .listRowBackground(Color.white.opacity(0.06))
+                    .tint(.primary)
+                    .listRowBackground(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(.ultraThinMaterial)
+                            .padding(.vertical, 2)
+                    )
                 }
             }
 
@@ -60,12 +63,10 @@ struct GradesView: View {
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
-        .background(Color.navyBackground)
         .navigationTitle("Grades")
         .overlay {
             if isLoading, gradesResponse == nil {
                 ProgressView()
-                    .tint(.white)
             }
         }
         .refreshable {
@@ -82,7 +83,7 @@ struct GradesView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Current GPA")
                 .font(.caption)
-                .foregroundStyle(Color.white.opacity(0.75))
+                .foregroundStyle(.white.opacity(0.8))
 
             HStack(alignment: .lastTextBaseline, spacing: 10) {
                 Text(gradesResponse.map { String(format: "%.2f", $0.gpa) } ?? "--")
@@ -91,19 +92,12 @@ struct GradesView: View {
 
                 Text(gpaLetter)
                     .font(.title2.weight(.semibold))
-                    .foregroundStyle(Color.bcLightBlue)
+                    .foregroundStyle(.white.opacity(0.8))
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(20)
-        .background(
-            LinearGradient(
-                colors: [Color.bcPrimaryBlue, Color.bcMidBlue],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            ),
-            in: RoundedRectangle(cornerRadius: 18)
-        )
+        .background(Color.appleBlue, in: RoundedRectangle(cornerRadius: 20))
     }
 
     private func assignmentsTable(for course: Course) -> some View {
@@ -116,17 +110,15 @@ struct GradesView: View {
                     .frame(width: 62, alignment: .trailing)
             }
             .font(.caption.weight(.semibold))
-            .foregroundStyle(Color.white.opacity(0.75))
+            .foregroundStyle(.secondary)
 
             ForEach(course.assignments) { assignment in
                 HStack {
                     Text(assignment.name)
-                        .foregroundStyle(.white)
                     Spacer()
                     Text("\(assignment.grade, specifier: "%.1f")%")
-                        .foregroundStyle(.white)
                     Text("\(assignment.weight, specifier: "%.0f")%")
-                        .foregroundStyle(Color.white.opacity(0.8))
+                        .foregroundStyle(.secondary)
                         .frame(width: 62, alignment: .trailing)
                 }
                 .font(.subheadline)
@@ -145,7 +137,7 @@ struct GradesView: View {
             if let relative = relativeLastUpdated {
                 Text("Last updated \(relative) ago")
                     .font(.caption)
-                    .foregroundStyle(Color.white.opacity(0.7))
+                    .foregroundStyle(.secondary)
             }
 
             if isStale {
@@ -168,43 +160,27 @@ struct GradesView: View {
         }
     }
 
-    private var relativeLastUpdated: String? {
-        guard let lastUpdated = gradesResponse?.lastUpdated,
-              let date = parseDate(lastUpdated) else {
-            return nil
-        }
+    private var parsedLastUpdated: Date? {
+        guard let raw = gradesResponse?.lastUpdated else { return nil }
+        return DateParsing.parse(raw)
+    }
 
+    private var relativeLastUpdated: String? {
+        guard let date = parsedLastUpdated else { return nil }
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .full
         return formatter.localizedString(for: date, relativeTo: Date())
     }
 
     private var isStale: Bool {
-        guard let lastUpdated = gradesResponse?.lastUpdated,
-              let date = parseDate(lastUpdated) else {
-            return false
-        }
-
-        let age = Date().timeIntervalSince(date)
-        return age > 72 * 60 * 60
-    }
-
-    private func parseDate(_ value: String) -> Date? {
-        let iso = ISO8601DateFormatter()
-        if let date = iso.date(from: value) {
-            return date
-        }
-
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSZ"
-        return formatter.date(from: value)
+        guard let date = parsedLastUpdated else { return false }
+        return Date().timeIntervalSince(date) > 72 * 60 * 60
     }
 
     private func letterGradeColor(_ letter: String) -> Color {
         let normalized = letter.uppercased()
         if normalized.hasPrefix("A") { return .gradeGreen }
-        if normalized.hasPrefix("B") { return .bcMidBlue }
+        if normalized.hasPrefix("B") { return .appleBlue }
         if normalized.hasPrefix("C") { return .gradeAmber }
         return .gradeRed
     }

@@ -34,24 +34,23 @@ struct DTCNavigatorView: View {
             }
         }
         .padding()
-        .background(Color.navyBackground.ignoresSafeArea())
         .navigationTitle("DTC Navigator")
-        .animation(.spring(response: 0.35, dampingFraction: 0.7), value: step)
-        .animation(.spring(response: 0.35, dampingFraction: 0.7), value: result != nil)
+        .animation(.tallySpring, value: step)
+        .animation(.tallySpring, value: result != nil)
     }
 
     private var progressHeader: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Step \(step) of \(totalSteps)")
                 .font(.caption)
-                .foregroundStyle(Color.white.opacity(0.75))
+                .foregroundStyle(.secondary)
 
             GeometryReader { proxy in
                 ZStack(alignment: .leading) {
                     Capsule()
-                        .fill(Color.white.opacity(0.1))
+                        .fill(.quaternary)
                     Capsule()
-                        .fill(Color.bcLightBlue)
+                        .fill(Color.appleBlue)
                         .frame(width: proxy.size.width * (Double(step) / Double(totalSteps)))
                 }
             }
@@ -137,7 +136,6 @@ struct DTCNavigatorView: View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Condition types")
                 .font(.title3.weight(.semibold))
-                .foregroundStyle(.white)
 
             ForEach(ConditionType.allCases) { type in
                 Button {
@@ -149,13 +147,12 @@ struct DTCNavigatorView: View {
                 } label: {
                     HStack {
                         Image(systemName: conditionTypes.contains(type) ? "checkmark.square.fill" : "square")
-                            .foregroundStyle(conditionTypes.contains(type) ? Color.bcLightBlue : Color.white.opacity(0.6))
+                            .foregroundStyle(conditionTypes.contains(type) ? Color.appleBlue : .secondary)
                         Text(type.label)
-                            .foregroundStyle(.white)
                         Spacer()
                     }
                     .padding(12)
-                    .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
                 }
                 .buttonStyle(.plain)
             }
@@ -167,15 +164,13 @@ struct DTCNavigatorView: View {
         VStack(alignment: .leading, spacing: 12) {
             Text(title)
                 .font(.title3.weight(.semibold))
-                .foregroundStyle(.white)
 
             Toggle(isOn: value) {
                 Text(value.wrappedValue ? "Yes" : "No")
-                    .foregroundStyle(.white)
             }
-            .tint(.bcLightBlue)
+            .tint(.appleBlue)
             .padding(14)
-            .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -191,21 +186,20 @@ struct DTCNavigatorView: View {
         VStack(alignment: .leading, spacing: 12) {
             Text(title)
                 .font(.title3.weight(.semibold))
-                .foregroundStyle(.white)
 
             Text(subtitle)
                 .font(.subheadline)
-                .foregroundStyle(Color.white.opacity(0.75))
+                .foregroundStyle(.secondary)
 
             Text("\(Int(value.wrappedValue))\(suffix)")
                 .font(.title3.weight(.semibold))
-                .foregroundStyle(Color.bcLightBlue)
+                .foregroundStyle(Color.appleBlue)
 
             Slider(value: value, in: range, step: step)
-                .tint(.bcLightBlue)
+                .tint(.appleBlue)
         }
         .padding(14)
-        .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
@@ -220,12 +214,11 @@ struct DTCNavigatorView: View {
             HStack {
                 Button("Back") {
                     guard step > 1 else { return }
-                    withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
+                    withAnimation(.tallySpring) {
                         step -= 1
                     }
                 }
                 .buttonStyle(.bordered)
-                .tint(.white)
                 .disabled(step == 1 || isLoading)
 
                 Spacer()
@@ -236,24 +229,23 @@ struct DTCNavigatorView: View {
                     } label: {
                         if isLoading {
                             ProgressView()
-                                .tint(.white)
                         } else {
                             Text("Check Eligibility")
                                 .fontWeight(.semibold)
                         }
                     }
                     .buttonStyle(.borderedProminent)
-                    .tint(.bcPrimaryBlue)
+                    .tint(.appleBlue)
                     .disabled(isLoading)
                 } else {
                     Button("Next") {
                         guard step < totalSteps else { return }
-                        withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
+                        withAnimation(.tallySpring) {
                             step += 1
                         }
                     }
                     .buttonStyle(.borderedProminent)
-                    .tint(.bcPrimaryBlue)
+                    .tint(.appleBlue)
                 }
             }
         }
@@ -270,51 +262,43 @@ struct DTCNavigatorView: View {
                 VStack(alignment: .leading, spacing: 10) {
                     Text("Recommended Programs")
                         .font(.headline)
-                        .foregroundStyle(.white)
 
                     if recommendedPrograms.isEmpty {
                         Text("No recommendations returned.")
-                            .foregroundStyle(Color.white.opacity(0.75))
+                            .foregroundStyle(.secondary)
                     } else {
                         ForEach(recommendedPrograms, id: \.self) { program in
-                            Text("• \(program)")
-                                .foregroundStyle(.white)
+                            Text("-- \(program)")
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         }
                     }
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(16)
-                .background(Color.white.opacity(0.07), in: RoundedRectangle(cornerRadius: 14))
+                .glassCard()
 
                 if !flags.isEmpty {
                     VStack(alignment: .leading, spacing: 10) {
                         Text("Flags")
                             .font(.headline)
-                            .foregroundStyle(.white)
 
                         FlowLayout(flags) { flag in
                             Text(flag.text)
                                 .font(.caption.weight(.semibold))
                                 .padding(.horizontal, 10)
                                 .padding(.vertical, 6)
-                                .background(flag.kind == .warning ? Color.gradeAmber : Color.bcMidBlue, in: Capsule())
+                                .background(flag.kind == .warning ? Color.gradeAmber : Color.appleBlue, in: Capsule())
                                 .foregroundStyle(.white)
                         }
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(16)
-                    .background(Color.white.opacity(0.07), in: RoundedRectangle(cornerRadius: 14))
+                    .glassCard()
                 }
 
                 Button("Start Over") {
-                    withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
+                    withAnimation(.tallySpring) {
                         result = nil
                         step = 1
                     }
                 }
                 .buttonStyle(.bordered)
-                .tint(.white)
             }
             .padding(.vertical, 6)
         }
@@ -324,21 +308,19 @@ struct DTCNavigatorView: View {
         VStack(spacing: 8) {
             ZStack {
                 Circle()
-                    .stroke(Color.white.opacity(0.15), lineWidth: 12)
+                    .stroke(.quaternary, lineWidth: 12)
                 Circle()
                     .trim(from: 0, to: max(0, min(value, 1)))
-                    .stroke(Color.bcLightBlue, style: StrokeStyle(lineWidth: 12, lineCap: .round))
+                    .stroke(Color.appleBlue, style: StrokeStyle(lineWidth: 12, lineCap: .round))
                     .rotationEffect(.degrees(-90))
 
                 Text("\(Int(value * 100))")
                     .font(.title2.weight(.bold))
-                    .foregroundStyle(.white)
             }
             .frame(width: 110, height: 110)
 
             Text(title)
                 .font(.subheadline.weight(.medium))
-                .foregroundStyle(.white)
         }
     }
 

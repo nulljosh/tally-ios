@@ -42,11 +42,13 @@ struct ReportView: View {
                 Button("Preview Report") {
                     Task { await submit(dryRun: true) }
                 }
+                .foregroundStyle(Color.appleBlue)
                 .disabled(!isFormValid || isSubmitting)
 
                 Button("Submit Report") {
                     showSubmitConfirmation = true
                 }
+                .foregroundStyle(Color.appleBlue)
                 .disabled(!isFormValid || isSubmitting)
                 .confirmationDialog("Submit monthly report now?", isPresented: $showSubmitConfirmation) {
                     Button("Submit", role: .destructive) {
@@ -72,7 +74,7 @@ struct ReportView: View {
             Section("Submission Status") {
                 if let statusText {
                     Text(statusText)
-                        .foregroundStyle(statusIsError ? Color.gradeRed : Color.bcMidBlue)
+                        .foregroundStyle(statusIsError ? Color.gradeRed : Color.appleBlue)
                 }
 
                 Text(lastSubmittedLabel)
@@ -80,8 +82,6 @@ struct ReportView: View {
             }
         }
         .navigationTitle("Reports")
-        .scrollContentBackground(.hidden)
-        .background(Color.navyBackground)
         .task {
             loadSavedSecrets()
             loadLastSubmittedDate()
@@ -170,17 +170,7 @@ struct ReportView: View {
     }
 
     private func parseDate(_ value: String?) -> Date? {
-        guard let value else { return nil }
-
-        let iso = ISO8601DateFormatter()
-        if let date = iso.date(from: value) {
-            return date
-        }
-
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSZ"
-        return formatter.date(from: value)
+        value.flatMap { DateParsing.parse($0) }
     }
 
     private func digitsOnly(from value: String, maxCount: Int) -> String {

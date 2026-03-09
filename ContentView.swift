@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ContentView: View {
     @Environment(AppState.self) private var appState
+    @State private var showSplash = true
 
     var body: some View {
         NavigationStack {
@@ -12,20 +13,28 @@ struct ContentView: View {
                     LoginScreen()
                 }
             }
-            .background(Color.navyBackground.ignoresSafeArea())
             .toolbar {
                 if appState.isAuthenticated {
                     ToolbarItem(placement: .topBarTrailing) {
                         Button("Logout") {
                             Task { await appState.logout() }
                         }
-                        .foregroundStyle(Color.bcLightBlue)
+                        .foregroundStyle(Color.appleBlue)
                     }
                 }
             }
         }
+        .overlay {
+            if showSplash {
+                SplashView()
+                    .transition(.opacity)
+            }
+        }
         .task {
             await appState.bootstrap()
+            withAnimation(.easeOut(duration: 0.5)) {
+                showSplash = false
+            }
         }
     }
 }
@@ -66,7 +75,7 @@ private struct AuthenticatedTabShell: View {
                 }
                 .badge(appState.statusMessageItems.count)
         }
-        .tint(Color.bcLightBlue)
+        .tint(.appleBlue)
     }
 }
 
@@ -80,13 +89,17 @@ private struct LoginScreen: View {
             Spacer()
 
             VStack(spacing: 10) {
+                Image(systemName: "chart.bar.doc.horizontal")
+                    .font(.system(size: 48))
+                    .foregroundStyle(Color.appleBlue)
+
                 Text("Tally")
                     .font(.system(size: 42, weight: .bold, design: .rounded))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
 
                 Text("Sign in to view your benefits dashboard")
                     .font(.subheadline)
-                    .foregroundStyle(Color.white.opacity(0.75))
+                    .foregroundStyle(.secondary)
             }
 
             VStack(spacing: 12) {
@@ -94,13 +107,11 @@ private struct LoginScreen: View {
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                     .padding()
-                    .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
-                    .foregroundStyle(.white)
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
 
                 SecureField("Password", text: $password)
                     .padding()
-                    .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
-                    .foregroundStyle(.white)
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
             }
 
             Button {
@@ -118,7 +129,7 @@ private struct LoginScreen: View {
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 14)
-                .background(Color.bcPrimaryBlue, in: RoundedRectangle(cornerRadius: 12))
+                .background(Color.appleBlue, in: RoundedRectangle(cornerRadius: 12))
                 .foregroundStyle(.white)
             }
             .disabled(username.isEmpty || password.isEmpty || appState.isLoading)
@@ -168,7 +179,7 @@ private struct DashboardScreen: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Payment Amount")
                 .font(.caption)
-                .foregroundStyle(Color.white.opacity(0.7))
+                .foregroundStyle(.white.opacity(0.8))
 
             Text(appState.paymentAmountText)
                 .font(.system(size: 52, weight: .bold, design: .rounded))
@@ -178,69 +189,55 @@ private struct DashboardScreen: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(20)
-        .background(
-            LinearGradient(
-                colors: [Color.bcPrimaryBlue, Color.bcMidBlue],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            ),
-            in: RoundedRectangle(cornerRadius: 18)
-        )
+        .background(Color.appleBlue, in: RoundedRectangle(cornerRadius: 20))
     }
 
     private var dateCard: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Next Payment Date")
                 .font(.caption)
-                .foregroundStyle(Color.white.opacity(0.7))
+                .foregroundStyle(.secondary)
 
             Text(appState.nextPaymentDateText)
                 .font(.title3.weight(.semibold))
-                .foregroundStyle(.white)
 
             Text("Countdown: \(appState.countdownText)")
                 .font(.subheadline)
-                .foregroundStyle(Color.bcLightBlue)
+                .foregroundStyle(Color.appleBlue)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(20)
-        .background(Color.white.opacity(0.07), in: RoundedRectangle(cornerRadius: 18))
+        .glassCard()
     }
 
     private var messagesCard: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Status Messages")
                 .font(.headline)
-                .foregroundStyle(.white)
 
             if appState.statusMessages.isEmpty {
                 Text("No messages available")
                     .font(.subheadline)
-                    .foregroundStyle(Color.white.opacity(0.7))
+                    .foregroundStyle(.secondary)
             } else {
                 ForEach(appState.statusMessageItems.prefix(3)) { message in
-                    Text("• \(message.text)")
+                    Text("-- \(message.text)")
                         .font(.subheadline)
-                        .foregroundStyle(Color.white.opacity(0.9))
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
 
                 if appState.statusMessageItems.count > 3 {
                     Text("Open Messages tab for \(appState.statusMessageItems.count - 3) more")
                         .font(.caption)
-                        .foregroundStyle(Color.white.opacity(0.65))
+                        .foregroundStyle(.secondary)
                 }
             }
 
             if let error = appState.errorMessage {
                 Text(error)
                     .font(.caption)
-                    .foregroundStyle(Color.bcLightBlue)
+                    .foregroundStyle(Color.appleBlue)
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(20)
-        .background(Color.white.opacity(0.07), in: RoundedRectangle(cornerRadius: 18))
+        .glassCard()
     }
 }
 
@@ -249,16 +246,15 @@ private struct OfflineBanner: View {
         HStack {
             Text("Offline")
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(.white)
 
             Spacer()
 
             Text("Showing last saved dashboard data")
                 .font(.caption)
-                .foregroundStyle(Color.white.opacity(0.85))
+                .foregroundStyle(.secondary)
         }
         .padding(12)
-        .background(Color.bcMidBlue, in: RoundedRectangle(cornerRadius: 10))
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 10))
     }
 }
 

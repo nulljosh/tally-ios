@@ -70,11 +70,13 @@ private struct AuthenticatedTabShell: View {
                     Label("Dispute", systemImage: "scale.3d")
                 }
 
-            MessagesView()
-                .tabItem {
-                    Label("Messages", systemImage: "envelope")
-                }
-                .badge(appState.statusMessageItems.count)
+            if !appState.statusMessageItems.isEmpty {
+                MessagesView()
+                    .tabItem {
+                        Label("Messages", systemImage: "envelope")
+                    }
+                    .badge(appState.statusMessageItems.count)
+            }
         }
         .tint(.appleBlue)
     }

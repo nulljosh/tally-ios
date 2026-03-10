@@ -4,6 +4,7 @@ struct GradesView: View {
     @State private var gradesResponse: SchoolGradesResponse?
     @State private var expandedCourseIDs: Set<String> = []
     @State private var isLoading = false
+    @State private var isRefreshing = false
     @State private var errorMessage: String?
 
     var body: some View {
@@ -64,6 +65,20 @@ struct GradesView: View {
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
         .navigationTitle("Grades")
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    Task { await refreshFromServer() }
+                } label: {
+                    if isRefreshing {
+                        ProgressView()
+                    } else {
+                        Image(systemName: "arrow.clockwise")
+                    }
+                }
+                .disabled(isRefreshing)
+            }
+        }
         .overlay {
             if isLoading, gradesResponse == nil {
                 ProgressView()
@@ -183,6 +198,20 @@ struct GradesView: View {
         if normalized.hasPrefix("B") { return .appleBlue }
         if normalized.hasPrefix("C") { return .gradeAmber }
         return .gradeRed
+    }
+
+    @MainActor
+    private func refreshFromServer() async {
+        isRefreshing = true
+        defer { isRefreshing = false }
+
+        do {
+            _ = try await APIClient.shared.check()
+            gradesResponse = try await APIClient.shared.grades()
+            errorMessage = nil
+        } catch {
+            errorMessage = error.localizedDescription
+        }
     }
 
     @MainActor

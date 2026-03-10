@@ -7,10 +7,7 @@ struct MessagesView: View {
         ScrollView {
             LazyVStack(spacing: 12) {
                 if appState.statusMessageItems.isEmpty {
-                    Text("No messages available")
-                        .foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .glassCard()
+                    EmptyView()
                 } else {
                     ForEach(appState.statusMessageItems) { message in
                         VStack(alignment: .leading, spacing: 8) {

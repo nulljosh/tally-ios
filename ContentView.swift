@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct ContentView: View {
     @Environment(AppState.self) private var appState
@@ -152,6 +153,8 @@ private struct LoginScreen: View {
 
 private struct DashboardScreen: View {
     @Environment(AppState.self) private var appState
+    @State private var exportedBenefitsURL: URL?
+    @State private var isShowingShareSheet = false
 
     var body: some View {
         ScrollView {
@@ -162,7 +165,9 @@ private struct DashboardScreen: View {
 
                 paymentCard
                 dateCard
-                messagesCard
+                if !appState.statusMessages.isEmpty {
+                    messagesCard
+                }
             }
             .padding()
         }
@@ -173,6 +178,29 @@ private struct DashboardScreen: View {
             await appState.loadDashboardIfNeeded()
         }
         .navigationTitle("Dashboard")
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    guard let dashboard = appState.dashboard,
+                          let url = CSVExporter.exportBenefits(dashboard: dashboard) else {
+                        return
+                    }
+
+                    exportedBenefitsURL = url
+                    isShowingShareSheet = true
+                } label: {
+                    Image(systemName: "doc.arrow.up.fill")
+                }
+                .disabled(appState.dashboard == nil)
+            }
+        }
+        .sheet(isPresented: $isShowingShareSheet, onDismiss: {
+            exportedBenefitsURL = nil
+        }) {
+            if let exportedBenefitsURL {
+                ShareSheet(items: [exportedBenefitsURL])
+            }
+        }
     }
 
     private var paymentCard: some View {
@@ -213,22 +241,16 @@ private struct DashboardScreen: View {
             Text("Status Messages")
                 .font(.headline)
 
-            if appState.statusMessages.isEmpty {
-                Text("No messages available")
+            ForEach(appState.statusMessageItems.prefix(3)) { message in
+                Text("-- \(message.text)")
                     .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            } else {
-                ForEach(appState.statusMessageItems.prefix(3)) { message in
-                    Text("-- \(message.text)")
-                        .font(.subheadline)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
 
-                if appState.statusMessageItems.count > 3 {
-                    Text("Open Messages tab for \(appState.statusMessageItems.count - 3) more")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
+            if appState.statusMessageItems.count > 3 {
+                Text("Open Messages tab for \(appState.statusMessageItems.count - 3) more")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
             if let error = appState.errorMessage {
@@ -239,6 +261,16 @@ private struct DashboardScreen: View {
         }
         .glassCard()
     }
+}
+
+private struct ShareSheet: UIViewControllerRepresentable {
+    let items: [Any]
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: items, applicationActivities: nil)
+    }
+
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
 
 private struct OfflineBanner: View {

@@ -100,10 +100,7 @@ struct GradesView: View {
     private var gpaCard: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("Current GPA")
-                .font(.caption.weight(.medium))
-                .foregroundStyle(.secondary)
-                .textCase(.uppercase)
-                .kerning(0.5)
+                .sectionLabel()
 
             HStack(alignment: .lastTextBaseline, spacing: 10) {
                 Text(gradesResponse.map { String(format: "%.2f", $0.gpa) } ?? "--")
@@ -185,9 +182,7 @@ struct GradesView: View {
 
     private var relativeLastUpdated: String? {
         guard let date = parsedLastUpdated else { return nil }
-        let formatter = RelativeDateTimeFormatter()
-        formatter.unitsStyle = .full
-        return formatter.localizedString(for: date, relativeTo: Date())
+        return relativeFormatter.localizedString(for: date, relativeTo: Date())
     }
 
     private var isStale: Bool {
@@ -242,4 +237,5 @@ struct GradesView: View {
     NavigationStack {
         GradesView()
     }
+    .environment(AppState())
 }

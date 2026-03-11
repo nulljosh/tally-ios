@@ -22,6 +22,10 @@ extension Color {
     }
 }
 
+// MARK: - Shared Shapes
+
+private let cardShape = RoundedRectangle(cornerRadius: 22, style: .continuous)
+
 // MARK: - Glass Card
 
 struct GlassCard: ViewModifier {
@@ -29,7 +33,7 @@ struct GlassCard: ViewModifier {
         content
             .padding(20)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+            .background(.ultraThinMaterial, in: cardShape)
             .shadow(color: .black.opacity(0.06), radius: 12, y: 4)
     }
 }
@@ -40,41 +44,65 @@ struct AccentGlassCard: ViewModifier {
             .padding(20)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background {
-                RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .fill(.ultraThinMaterial)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 22, style: .continuous)
-                            .fill(Color.appleBlue.opacity(0.12))
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 22, style: .continuous)
-                            .strokeBorder(Color.appleBlue.opacity(0.25), lineWidth: 0.5)
-                    )
+                cardShape.fill(.ultraThinMaterial)
+                    .overlay(cardShape.fill(Color.appleBlue.opacity(0.12)))
+                    .overlay(cardShape.strokeBorder(Color.appleBlue.opacity(0.25), lineWidth: 0.5))
             }
             .shadow(color: Color.appleBlue.opacity(0.08), radius: 16, y: 6)
+    }
+}
+
+// MARK: - Section Label
+
+struct SectionLabel: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .font(.caption.weight(.medium))
+            .foregroundStyle(.secondary)
+            .textCase(.uppercase)
+            .kerning(0.5)
     }
 }
 
 extension View {
     func glassCard() -> some View { modifier(GlassCard()) }
     func accentGlassCard() -> some View { modifier(AccentGlassCard()) }
+    func sectionLabel() -> some View { modifier(SectionLabel()) }
 }
 
 // MARK: - Date Parsing
 
 enum DateParsing {
     nonisolated(unsafe) private static let isoFormatter = ISO8601DateFormatter()
-    private static let fallbackFormatter: DateFormatter = {
-        let f = DateFormatter()
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSZ"
-        return f
+    private static let fallbackFormatters: [DateFormatter] = {
+        let formats = [
+            "yyyy-MM-dd'T'HH:mm:ss.SSSZ",
+            "yyyy-MM-dd",
+            "yyyy/MM/dd",
+            "MMM d, yyyy",
+        ]
+        return formats.map { fmt in
+            let f = DateFormatter()
+            f.locale = Locale(identifier: "en_US_POSIX")
+            f.dateFormat = fmt
+            return f
+        }
     }()
 
     static func parse(_ value: String) -> Date? {
-        isoFormatter.date(from: value) ?? fallbackFormatter.date(from: value)
+        if let date = isoFormatter.date(from: value) { return date }
+        for formatter in fallbackFormatters {
+            if let date = formatter.date(from: value) { return date }
+        }
+        return nil
     }
 }
+
+nonisolated(unsafe) let relativeFormatter: RelativeDateTimeFormatter = {
+    let f = RelativeDateTimeFormatter()
+    f.unitsStyle = .full
+    return f
+}()
 
 // MARK: - Animation
 

@@ -20,12 +20,15 @@ final class AppState {
     private let monitor = NWPathMonitor()
     private let monitorQueue = DispatchQueue(label: "com.heyitsmejosh.tally.network")
 
+    private var storedCredentials: KeychainHelper.Credentials?
+
     init() {
         startNetworkMonitoring()
-        loadCachedDashboard()
-        loadCachedGrades()
-        // If we have cached data and saved credentials, show dashboard immediately
-        if dashboard != nil, KeychainHelper.loadCredentials() != nil {
+        dashboard = Self.loadCached(DashboardData.self, forKey: Constants.dashboardCacheKey)
+        cachedGrades = Self.loadCached(SchoolGradesResponse.self, forKey: Constants.gradesCacheKey)
+        // Single keychain read -- reused by bootstrap()
+        storedCredentials = KeychainHelper.loadCredentials()
+        if dashboard != nil, storedCredentials != nil {
             isAuthenticated = true
         }
     }
@@ -68,28 +71,12 @@ final class AppState {
 
     private var parsedNextPaymentDate: Date? {
         guard let raw = dashboard?.nextPaymentDate, !raw.isEmpty else { return nil }
-
-        let isoFormatter = ISO8601DateFormatter()
-        if let isoDate = isoFormatter.date(from: raw) {
-            return isoDate
-        }
-
-        let dateFormatter = DateFormatter()
-        dateFormatter.locale = Locale(identifier: "en_US_POSIX")
-
-        let formats = ["yyyy-MM-dd", "yyyy/MM/dd", "MMM d, yyyy"]
-        for format in formats {
-            dateFormatter.dateFormat = format
-            if let date = dateFormatter.date(from: raw) {
-                return date
-            }
-        }
-
-        return nil
+        return DateParsing.parse(raw)
     }
 
     func bootstrap() async {
-        if let credentials = KeychainHelper.loadCredentials() {
+        if let credentials = storedCredentials {
+            storedCredentials = nil
             await login(username: credentials.username, password: credentials.password, storeCredentials: false)
             return
         }
@@ -210,31 +197,22 @@ final class AppState {
     }
 
     private func cacheDashboard(_ value: DashboardData) {
-        guard let data = try? JSONEncoder().encode(value) else { return }
-        UserDefaults.standard.set(data, forKey: Constants.dashboardCacheKey)
+        Self.cache(value, forKey: Constants.dashboardCacheKey)
     }
 
     func cacheGrades(_ value: SchoolGradesResponse) {
         cachedGrades = value
+        Self.cache(value, forKey: Constants.gradesCacheKey)
+    }
+
+    private static func cache<T: Encodable>(_ value: T, forKey key: String) {
         guard let data = try? JSONEncoder().encode(value) else { return }
-        UserDefaults.standard.set(data, forKey: Constants.gradesCacheKey)
+        UserDefaults.standard.set(data, forKey: key)
     }
 
-    private func loadCachedGrades() {
-        guard let data = UserDefaults.standard.data(forKey: Constants.gradesCacheKey),
-              let decoded = try? JSONDecoder().decode(SchoolGradesResponse.self, from: data) else {
-            return
-        }
-        cachedGrades = decoded
-    }
-
-    private func loadCachedDashboard() {
-        guard let data = UserDefaults.standard.data(forKey: Constants.dashboardCacheKey),
-              let decoded = try? JSONDecoder().decode(DashboardData.self, from: data) else {
-            return
-        }
-
-        dashboard = decoded
+    private static func loadCached<T: Decodable>(_ type: T.Type, forKey key: String) -> T? {
+        guard let data = UserDefaults.standard.data(forKey: key) else { return nil }
+        return try? JSONDecoder().decode(type, from: data)
     }
 
     private func clearCookies() {

@@ -212,10 +212,7 @@ private struct DashboardScreen: View {
     private var paymentCard: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("Payment Amount")
-                .font(.caption.weight(.medium))
-                .foregroundStyle(.secondary)
-                .textCase(.uppercase)
-                .kerning(0.5)
+                .sectionLabel()
 
             Text(appState.paymentAmountText)
                 .font(.system(size: 48, weight: .bold))

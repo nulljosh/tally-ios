@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git add:*)",
+      "Bash(xcodebuild -scheme Tally -destination 'platform=iOS Simulator,name=iPhone 17 Pro' build 2>&1 | tail -5)",
+      "Bash(xcodebuild -scheme Tally -destination 'platform=iOS Simulator,name=iPhone 17 Pro' build 2>&1 | tail -3)"
+    ]
+  }
+}

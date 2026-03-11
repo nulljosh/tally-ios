@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct GradesView: View {
+    @Environment(AppState.self) private var appState
     @State private var gradesResponse: SchoolGradesResponse?
     @State private var expandedCourseIDs: Set<String> = []
     @State private var isLoading = false
@@ -88,9 +89,11 @@ struct GradesView: View {
             await loadGrades()
         }
         .task {
-            if gradesResponse == nil {
-                await loadGrades()
+            // Show cached grades instantly, refresh in background
+            if gradesResponse == nil, let cached = appState.cachedGrades {
+                gradesResponse = cached
             }
+            await loadGrades()
         }
     }
 
@@ -207,7 +210,9 @@ struct GradesView: View {
 
         do {
             _ = try await APIClient.shared.check()
-            gradesResponse = try await APIClient.shared.grades()
+            let fresh = try await APIClient.shared.grades()
+            gradesResponse = fresh
+            appState.cacheGrades(fresh)
             errorMessage = nil
         } catch {
             errorMessage = error.localizedDescription
@@ -216,14 +221,19 @@ struct GradesView: View {
 
     @MainActor
     private func loadGrades() async {
-        isLoading = true
-        defer { isLoading = false }
+        let showSpinner = gradesResponse == nil
+        if showSpinner { isLoading = true }
+        defer { if showSpinner { isLoading = false } }
 
         do {
-            gradesResponse = try await APIClient.shared.grades()
+            let fresh = try await APIClient.shared.grades()
+            gradesResponse = fresh
+            appState.cacheGrades(fresh)
             errorMessage = nil
         } catch {
-            errorMessage = error.localizedDescription
+            if gradesResponse == nil {
+                errorMessage = error.localizedDescription
+            }
         }
     }
 }

@@ -7,6 +7,7 @@ import Observation
 final class AppState {
     private enum Constants {
         static let dashboardCacheKey = "cached-dashboard-data"
+        static let gradesCacheKey = "cached-grades-data"
     }
 
     var isAuthenticated = false
@@ -14,6 +15,7 @@ final class AppState {
     var errorMessage: String?
     var dashboard: DashboardData?
     var isOffline = false
+    var cachedGrades: SchoolGradesResponse?
 
     private let monitor = NWPathMonitor()
     private let monitorQueue = DispatchQueue(label: "com.heyitsmejosh.tally.network")
@@ -21,6 +23,7 @@ final class AppState {
     init() {
         startNetworkMonitoring()
         loadCachedDashboard()
+        loadCachedGrades()
         // If we have cached data and saved credentials, show dashboard immediately
         if dashboard != nil, KeychainHelper.loadCredentials() != nil {
             isAuthenticated = true
@@ -209,6 +212,20 @@ final class AppState {
     private func cacheDashboard(_ value: DashboardData) {
         guard let data = try? JSONEncoder().encode(value) else { return }
         UserDefaults.standard.set(data, forKey: Constants.dashboardCacheKey)
+    }
+
+    func cacheGrades(_ value: SchoolGradesResponse) {
+        cachedGrades = value
+        guard let data = try? JSONEncoder().encode(value) else { return }
+        UserDefaults.standard.set(data, forKey: Constants.gradesCacheKey)
+    }
+
+    private func loadCachedGrades() {
+        guard let data = UserDefaults.standard.data(forKey: Constants.gradesCacheKey),
+              let decoded = try? JSONDecoder().decode(SchoolGradesResponse.self, from: data) else {
+            return
+        }
+        cachedGrades = decoded
     }
 
     private func loadCachedDashboard() {

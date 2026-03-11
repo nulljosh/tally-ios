@@ -32,10 +32,14 @@ struct ContentView: View {
             }
         }
         .task {
-            await appState.bootstrap()
-            withAnimation(.easeOut(duration: 0.5)) {
+            // Dismiss splash after brief animation -- never block on network
+            try? await Task.sleep(for: .milliseconds(800))
+            withAnimation(.easeOut(duration: 0.4)) {
                 showSplash = false
             }
+        }
+        .task {
+            await appState.bootstrap()
         }
     }
 }
@@ -97,7 +101,7 @@ private struct LoginScreen: View {
                     .foregroundStyle(Color.appleBlue)
 
                 Text("Tally")
-                    .font(.system(size: 42, weight: .bold, design: .rounded))
+                    .font(.system(size: 42, weight: .bold))
                     .foregroundStyle(.primary)
 
                 Text("Sign in to view your benefits dashboard")
@@ -110,11 +114,11 @@ private struct LoginScreen: View {
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                     .padding()
-                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
 
                 SecureField("Password", text: $password)
                     .padding()
-                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
             }
 
             Button {
@@ -132,7 +136,7 @@ private struct LoginScreen: View {
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 14)
-                .background(Color.appleBlue, in: RoundedRectangle(cornerRadius: 12))
+                .background(Color.appleBlue, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                 .foregroundStyle(.white)
             }
             .disabled(username.isEmpty || password.isEmpty || appState.isLoading)
@@ -206,33 +210,40 @@ private struct DashboardScreen: View {
     }
 
     private var paymentCard: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 6) {
             Text("Payment Amount")
-                .font(.caption)
-                .foregroundStyle(.white.opacity(0.8))
+                .font(.caption.weight(.medium))
+                .foregroundStyle(.secondary)
+                .textCase(.uppercase)
+                .kerning(0.5)
 
             Text(appState.paymentAmountText)
-                .font(.system(size: 52, weight: .bold, design: .rounded))
-                .foregroundStyle(.white)
-                .minimumScaleFactor(0.8)
+                .font(.system(size: 48, weight: .bold))
+                .foregroundStyle(Color.appleBlue)
+                .minimumScaleFactor(0.7)
                 .lineLimit(1)
+                .contentTransition(.numericText())
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(20)
-        .background(Color.appleBlue, in: RoundedRectangle(cornerRadius: 20))
+        .accentGlassCard()
     }
 
     private var dateCard: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Next Payment Date")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+        HStack {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Next Payment")
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(.secondary)
+                    .textCase(.uppercase)
+                    .kerning(0.5)
 
-            Text(appState.nextPaymentDateText)
-                .font(.title3.weight(.semibold))
+                Text(appState.nextPaymentDateText)
+                    .font(.title3.weight(.semibold))
+            }
 
-            Text("Countdown: \(appState.countdownText)")
-                .font(.subheadline)
+            Spacer()
+
+            Text(appState.countdownText)
+                .font(.title2.weight(.bold))
                 .foregroundStyle(Color.appleBlue)
         }
         .glassCard()
@@ -288,7 +299,7 @@ private struct OfflineBanner: View {
                 .foregroundStyle(.secondary)
         }
         .padding(12)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 10))
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }
 

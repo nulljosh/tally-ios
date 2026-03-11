@@ -8,7 +8,7 @@ struct SplashView: View {
                 .foregroundStyle(Color.appleBlue)
 
             Text("Tally")
-                .font(.system(size: 38, weight: .bold, design: .rounded))
+                .font(.system(size: 38, weight: .bold))
                 .foregroundStyle(.primary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

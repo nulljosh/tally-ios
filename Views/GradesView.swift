@@ -95,24 +95,24 @@ struct GradesView: View {
     }
 
     private var gpaCard: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 6) {
             Text("Current GPA")
-                .font(.caption)
-                .foregroundStyle(.white.opacity(0.8))
+                .font(.caption.weight(.medium))
+                .foregroundStyle(.secondary)
+                .textCase(.uppercase)
+                .kerning(0.5)
 
             HStack(alignment: .lastTextBaseline, spacing: 10) {
                 Text(gradesResponse.map { String(format: "%.2f", $0.gpa) } ?? "--")
-                    .font(.system(size: 46, weight: .bold, design: .rounded))
-                    .foregroundStyle(.white)
+                    .font(.system(size: 44, weight: .bold))
+                    .foregroundStyle(Color.appleBlue)
 
                 Text(gpaLetter)
                     .font(.title2.weight(.semibold))
-                    .foregroundStyle(.white.opacity(0.8))
+                    .foregroundStyle(Color.appleBlue.opacity(0.7))
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(20)
-        .background(Color.appleBlue, in: RoundedRectangle(cornerRadius: 20))
+        .accentGlassCard()
     }
 
     private func assignmentsTable(for course: Course) -> some View {

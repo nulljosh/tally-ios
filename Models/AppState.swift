@@ -21,6 +21,10 @@ final class AppState {
     init() {
         startNetworkMonitoring()
         loadCachedDashboard()
+        // If we have cached data and saved credentials, show dashboard immediately
+        if dashboard != nil, KeychainHelper.loadCredentials() != nil {
+            isAuthenticated = true
+        }
     }
 
     deinit {

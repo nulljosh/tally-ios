@@ -38,6 +38,8 @@ final class APIClient: @unchecked Sendable {
         configuration.httpShouldSetCookies = true
         configuration.httpCookieStorage = .shared
         configuration.requestCachePolicy = .reloadIgnoringLocalCacheData
+        configuration.timeoutIntervalForRequest = 15
+        configuration.timeoutIntervalForResource = 30
 
         session = URLSession(configuration: configuration)
     }

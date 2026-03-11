@@ -19,9 +19,9 @@ iOS companion for [Tally](https://github.com/nulljosh/tally), the BC benefits tr
 - [x] Messages: inbox from BC Self-Serve
 - [x] Reports: view report table data, submit monthly report
 - [x] Settings: refresh data (triggers Puppeteer scrape), clear cache, sign out
+- [x] Offline caching of last-known data
+- [x] Apple Liquid Glass UI with SF Pro typography
 - [ ] Push notifications for payment dates
-- [ ] DTC Navigator integration
-- [ ] Offline caching of last-known data
 
 ## Stack
 

@@ -13,12 +13,13 @@ iOS companion for [Tally](https://github.com/nulljosh/tally). BC benefits tracke
 - No emojis
 
 ## Roadmap
-- [ ] Auth: BC Self-Serve login
-- [ ] Dashboard: payment amount, countdown, status
-- [ ] Monthly reports: view status, submit
+- [x] Auth: BC Self-Serve login
+- [x] Dashboard: payment amount, countdown, status
+- [x] Monthly reports: view status, submit
+- [x] DTC Navigator integration
+- [x] Offline caching with instant launch
+- [x] Apple Liquid Glass UI, SF Pro typography
 - [ ] Push notifications for payment dates
-- [ ] DTC Navigator integration
-- [ ] Offline caching of last-known data
 
 ## Build
 ```bash

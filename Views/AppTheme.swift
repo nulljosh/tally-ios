@@ -29,12 +29,35 @@ struct GlassCard: ViewModifier {
         content
             .padding(20)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20))
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+            .shadow(color: .black.opacity(0.06), radius: 12, y: 4)
+    }
+}
+
+struct AccentGlassCard: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .padding(20)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background {
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .fill(.ultraThinMaterial)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 22, style: .continuous)
+                            .fill(Color.appleBlue.opacity(0.12))
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 22, style: .continuous)
+                            .strokeBorder(Color.appleBlue.opacity(0.25), lineWidth: 0.5)
+                    )
+            }
+            .shadow(color: Color.appleBlue.opacity(0.08), radius: 16, y: 6)
     }
 }
 
 extension View {
     func glassCard() -> some View { modifier(GlassCard()) }
+    func accentGlassCard() -> some View { modifier(AccentGlassCard()) }
 }
 
 // MARK: - Date Parsing

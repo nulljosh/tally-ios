@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import LocalAuthentication
 
 struct ContentView: View {
     @Environment(AppState.self) private var appState
@@ -90,6 +91,15 @@ private struct LoginScreen: View {
     @Environment(AppState.self) private var appState
     @State private var username = ""
     @State private var password = ""
+    @State private var biometryType: LABiometryType = .none
+
+    private var biometricLabel: String {
+        biometryType == .faceID ? "Face ID" : "Touch ID"
+    }
+
+    private var biometricIcon: String {
+        biometryType == .faceID ? "faceid" : "touchid"
+    }
 
     var body: some View {
         VStack(spacing: 20) {
@@ -119,6 +129,21 @@ private struct LoginScreen: View {
                 SecureField("Password", text: $password)
                     .padding()
                     .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            }
+
+            if biometryType != .none, appState.hasSavedBiometricCredentials() {
+                Button {
+                    Task {
+                        await appState.biometricLogin()
+                    }
+                } label: {
+                    Label("Sign in with \(biometricLabel)", systemImage: biometricIcon)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .fontWeight(.semibold)
+                }
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .foregroundStyle(Color.appleBlue)
             }
 
             Button {
@@ -154,6 +179,9 @@ private struct LoginScreen: View {
         .padding(24)
         .navigationTitle("Sign In")
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            biometryType = appState.biometricBiometryType()
+        }
     }
 }
 

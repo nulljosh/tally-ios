@@ -1,4 +1,5 @@
 import Foundation
+import LocalAuthentication
 import Network
 import Observation
 
@@ -26,11 +27,7 @@ final class AppState {
         startNetworkMonitoring()
         dashboard = Self.loadCached(DashboardData.self, forKey: Constants.dashboardCacheKey)
         cachedGrades = Self.loadCached(SchoolGradesResponse.self, forKey: Constants.gradesCacheKey)
-        // Single keychain read -- reused by bootstrap()
         storedCredentials = KeychainHelper.loadCredentials()
-        if dashboard != nil, storedCredentials != nil {
-            isAuthenticated = true
-        }
     }
 
     deinit {
@@ -77,12 +74,51 @@ final class AppState {
     func bootstrap() async {
         if let credentials = storedCredentials {
             storedCredentials = nil
-            await login(username: credentials.username, password: credentials.password, storeCredentials: false)
+            if biometricBiometryType() != .none {
+                do {
+                    try await authenticateWithBiometrics()
+                    await login(username: credentials.username, password: credentials.password, storeCredentials: false)
+                } catch let error as LAError where error.code == .userCancel || error.code == .systemCancel || error.code == .appCancel {
+                    errorMessage = nil
+                } catch {
+                    errorMessage = error.localizedDescription
+                }
+            } else {
+                await login(username: credentials.username, password: credentials.password, storeCredentials: false)
+            }
             return
         }
 
         if dashboard == nil {
             errorMessage = "Please sign in to load your dashboard."
+        }
+    }
+
+    func biometricBiometryType() -> LABiometryType {
+        let context = LAContext()
+        guard context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: nil) else {
+            return .none
+        }
+        return context.biometryType
+    }
+
+    func hasSavedBiometricCredentials() -> Bool {
+        KeychainHelper.loadCredentials() != nil
+    }
+
+    func biometricLogin() async {
+        guard let credentials = KeychainHelper.loadCredentials() else {
+            errorMessage = "No saved credentials found."
+            return
+        }
+
+        do {
+            try await authenticateWithBiometrics()
+            await login(username: credentials.username, password: credentials.password, storeCredentials: false)
+        } catch let error as LAError where error.code == .userCancel || error.code == .systemCancel || error.code == .appCancel {
+            errorMessage = nil
+        } catch {
+            errorMessage = error.localizedDescription
         }
     }
 
@@ -220,5 +256,10 @@ final class AppState {
         for cookie in cookies {
             HTTPCookieStorage.shared.deleteCookie(cookie)
         }
+    }
+
+    private func authenticateWithBiometrics() async throws {
+        let context = LAContext()
+        try await context.evaluatePolicy(.deviceOwnerAuthentication, localizedReason: "Sign in to Tally")
     }
 }

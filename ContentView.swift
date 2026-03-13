@@ -185,29 +185,25 @@ private struct DashboardScreen: View {
 
     var body: some View {
         ScrollView {
-            GeometryReader { geo in
-                VStack(spacing: 18) {
-                    if appState.isOffline {
-                        OfflineBanner()
-                    }
-
-                    paymentCard
-
-                    Spacer(minLength: 0)
-
-                    dateCard
-
-                    Spacer(minLength: 0)
-
-                    quickActions
-
-                    if !appState.statusMessages.isEmpty {
-                        messagesCard
-                    }
+            VStack(spacing: 18) {
+                if appState.isOffline {
+                    OfflineBanner()
                 }
-                .frame(minHeight: geo.size.height)
-                .padding()
+
+                paymentCard
+
+                dateCard
+
+                Spacer()
+
+                quickActions
+
+                if !appState.statusMessages.isEmpty {
+                    messagesCard
+                }
             }
+            .padding()
+            .containerRelativeFrame(.vertical, alignment: .top)
         }
         .refreshable {
             await appState.refreshDashboard()
@@ -247,7 +243,7 @@ private struct DashboardScreen: View {
                 .sectionLabel()
 
             Text(appState.paymentAmountText)
-                .font(.system(size: 54, weight: .bold))
+                .font(.system(size: 48, weight: .bold))
                 .foregroundStyle(Color.appleBlue)
                 .minimumScaleFactor(0.7)
                 .lineLimit(1)

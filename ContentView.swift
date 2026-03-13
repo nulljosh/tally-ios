@@ -15,16 +15,6 @@ struct ContentView: View {
                     LoginScreen()
                 }
             }
-            .toolbar {
-                if appState.isAuthenticated {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button("Logout") {
-                            Task { await appState.logout() }
-                        }
-                        .foregroundStyle(Color.appleBlue)
-                    }
-                }
-            }
         }
         .overlay {
             if showSplash {
@@ -49,37 +39,58 @@ private struct AuthenticatedTabShell: View {
     @Environment(AppState.self) private var appState
 
     var body: some View {
-        TabView {
+        TabView(selection: Binding(
+            get: { appState.selectedTabIndex },
+            set: { appState.selectedTabIndex = $0 }
+        )) {
             DashboardScreen()
                 .tabItem {
                     Label("Dashboard", systemImage: "house")
                 }
+                .tag(0)
 
             GradesView()
                 .tabItem {
                     Label("Grades", systemImage: "graduationcap")
                 }
+                .tag(1)
 
             DTCNavigatorView()
                 .tabItem {
                     Label("DTC", systemImage: "accessibility")
                 }
+                .tag(2)
+
+            CRAView()
+                .tabItem {
+                    Label("CRA", systemImage: "dollarsign.circle")
+                }
+                .tag(3)
 
             ReportView()
                 .tabItem {
                     Label("Reports", systemImage: "doc.text")
                 }
+                .tag(4)
 
             DisputeView()
                 .tabItem {
                     Label("Dispute", systemImage: "scale.3d")
                 }
+                .tag(5)
+
+            SettingsView()
+                .tabItem {
+                    Label("Settings", systemImage: "gearshape")
+                }
+                .tag(7)
 
             if !appState.statusMessageItems.isEmpty {
                 MessagesView()
                     .tabItem {
                         Label("Messages", systemImage: "envelope")
                     }
+                    .tag(6)
                     .badge(appState.statusMessageItems.count)
             }
         }

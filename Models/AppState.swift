@@ -17,6 +17,9 @@ final class AppState {
     var dashboard: DashboardData?
     var isOffline = false
     var cachedGrades: SchoolGradesResponse?
+    var lastGradesFetchDate: Date? = nil
+    var selectedTabIndex: Int = 0
+    var dtcScreenResult: DTCScreenResult? = nil
 
     private let monitor = NWPathMonitor()
     private let monitorQueue = DispatchQueue(label: "com.heyitsmejosh.tally.network")
@@ -239,6 +242,14 @@ final class AppState {
     func cacheGrades(_ value: SchoolGradesResponse) {
         cachedGrades = value
         Self.cache(value, forKey: Constants.gradesCacheKey)
+    }
+
+    func clearAllCachedData() {
+        UserDefaults.standard.removeObject(forKey: Constants.dashboardCacheKey)
+        UserDefaults.standard.removeObject(forKey: Constants.gradesCacheKey)
+        dashboard = nil
+        cachedGrades = nil
+        dtcScreenResult = nil
     }
 
     private static func cache<T: Encodable>(_ value: T, forKey key: String) {

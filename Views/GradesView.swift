@@ -2,11 +2,15 @@ import SwiftUI
 
 struct GradesView: View {
     @Environment(AppState.self) private var appState
+    @Environment(\.scenePhase) private var scenePhase
     @State private var gradesResponse: SchoolGradesResponse?
     @State private var expandedCourseIDs: Set<String> = []
     @State private var isLoading = false
     @State private var isRefreshing = false
+    @State private var isFetchingGrades = false
     @State private var errorMessage: String?
+
+    private let refreshTimer = Timer.publish(every: 30 * 60, on: .main, in: .common).autoconnect()
 
     var body: some View {
         List {
@@ -86,7 +90,14 @@ struct GradesView: View {
             }
         }
         .refreshable {
-            await loadGrades()
+            await loadGrades(force: true)
+        }
+        .onAppear {
+            Task { await loadGradesOnAppearIfNeeded() }
+        }
+        .onReceive(refreshTimer) { _ in
+            guard scenePhase == .active else { return }
+            Task { await loadGrades() }
         }
         .task {
             // Show cached grades instantly, refresh in background
@@ -200,14 +211,21 @@ struct GradesView: View {
 
     @MainActor
     private func refreshFromServer() async {
+        guard !isFetchingGrades else { return }
+
+        isFetchingGrades = true
         isRefreshing = true
-        defer { isRefreshing = false }
+        defer {
+            isRefreshing = false
+            isFetchingGrades = false
+        }
 
         do {
             _ = try await APIClient.shared.check()
             let fresh = try await APIClient.shared.grades()
             gradesResponse = fresh
             appState.cacheGrades(fresh)
+            appState.lastGradesFetchDate = Date()
             errorMessage = nil
         } catch {
             errorMessage = error.localizedDescription
@@ -215,21 +233,39 @@ struct GradesView: View {
     }
 
     @MainActor
-    private func loadGrades() async {
+    private func loadGrades(force: Bool = false) async {
+        guard !isFetchingGrades else { return }
+        guard force || shouldFetchGrades else { return }
+
+        isFetchingGrades = true
         let showSpinner = gradesResponse == nil
         if showSpinner { isLoading = true }
-        defer { if showSpinner { isLoading = false } }
+        defer {
+            isFetchingGrades = false
+            if showSpinner { isLoading = false }
+        }
 
         do {
             let fresh = try await APIClient.shared.grades()
             gradesResponse = fresh
             appState.cacheGrades(fresh)
+            appState.lastGradesFetchDate = Date()
             errorMessage = nil
         } catch {
             if gradesResponse == nil {
                 errorMessage = error.localizedDescription
             }
         }
+    }
+
+    @MainActor
+    private func loadGradesOnAppearIfNeeded() async {
+        await loadGrades()
+    }
+
+    private var shouldFetchGrades: Bool {
+        guard let lastFetchDate = appState.lastGradesFetchDate else { return true }
+        return Date().timeIntervalSince(lastFetchDate) >= 5 * 60
     }
 }
 

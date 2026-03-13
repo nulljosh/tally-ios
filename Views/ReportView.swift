@@ -18,49 +18,86 @@ struct ReportView: View {
 
     var body: some View {
         Form {
-            Section("Credentials") {
-                SecureField("SIN (9 digits)", text: $sin)
-                    .keyboardType(.numberPad)
-                    .onChange(of: sin) { _, newValue in
-                        sin = digitsOnly(from: newValue, maxCount: 9)
+            Section("Personal Information") {
+                VStack(alignment: .leading, spacing: 16) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Social Insurance Number")
+                            .font(.subheadline.weight(.medium))
+
+                        SecureField("SIN (9 digits)", text: $sin)
+                            .keyboardType(.numberPad)
+                            .onChange(of: sin) { _, newValue in
+                                sin = digitsOnly(from: newValue, maxCount: 9)
+                            }
+
+                        if let sinValidationMessage {
+                            Text(sinValidationMessage)
+                                .font(.footnote)
+                                .foregroundStyle(Color.gradeRed)
+                        }
                     }
 
-                TextField("Phone", text: $phone)
-                    .keyboardType(.phonePad)
-                    .onChange(of: phone) { _, newValue in
-                        phone = formatPhone(newValue)
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Phone Number")
+                            .font(.subheadline.weight(.medium))
+
+                        TextField("Phone", text: $phone)
+                            .keyboardType(.phonePad)
+                            .onChange(of: phone) { _, newValue in
+                                phone = formatPhone(newValue)
+                            }
+
+                        if let phoneValidationMessage {
+                            Text(phoneValidationMessage)
+                                .font(.footnote)
+                                .foregroundStyle(Color.gradeRed)
+                        }
                     }
 
-                SecureField("PIN", text: $pin)
-                    .keyboardType(.numberPad)
-                    .onChange(of: pin) { _, newValue in
-                        pin = digitsOnly(from: newValue, maxCount: 12)
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Personal Identification Number")
+                            .font(.subheadline.weight(.medium))
+
+                        SecureField("PIN", text: $pin)
+                            .keyboardType(.numberPad)
+                            .onChange(of: pin) { _, newValue in
+                                pin = digitsOnly(from: newValue, maxCount: 12)
+                            }
+
+                        if let pinValidationMessage {
+                            Text(pinValidationMessage)
+                                .font(.footnote)
+                                .foregroundStyle(Color.gradeRed)
+                        }
                     }
+                }
             }
 
-            Section("Actions") {
-                Button("Preview Report") {
-                    Task { await submit(dryRun: true) }
-                }
-                .foregroundStyle(Color.appleBlue)
-                .disabled(!isFormValid || isSubmitting)
-
-                Button("Submit Report") {
-                    showSubmitConfirmation = true
-                }
-                .foregroundStyle(Color.appleBlue)
-                .disabled(!isFormValid || isSubmitting)
-                .confirmationDialog("Submit monthly report now?", isPresented: $showSubmitConfirmation) {
-                    Button("Submit", role: .destructive) {
-                        Task { await submit(dryRun: false) }
+            Section("Submission") {
+                VStack(alignment: .leading, spacing: 16) {
+                    Button("Preview Report") {
+                        Task { await submit(dryRun: true) }
                     }
-                    Button("Cancel", role: .cancel) { }
-                }
+                    .foregroundStyle(Color.appleBlue)
+                    .disabled(!isFormValid || isSubmitting)
 
-                if isSubmitting {
-                    HStack {
-                        ProgressView()
-                        Text("Submitting...")
+                    Button("Submit Report") {
+                        showSubmitConfirmation = true
+                    }
+                    .foregroundStyle(Color.appleBlue)
+                    .disabled(!isFormValid || isSubmitting)
+                    .confirmationDialog("Submit monthly report now?", isPresented: $showSubmitConfirmation) {
+                        Button("Submit", role: .destructive) {
+                            Task { await submit(dryRun: false) }
+                        }
+                        Button("Cancel", role: .cancel) { }
+                    }
+
+                    if isSubmitting {
+                        HStack {
+                            ProgressView()
+                            Text("Submitting...")
+                        }
                     }
                 }
             }
@@ -90,6 +127,27 @@ struct ReportView: View {
 
     private var isFormValid: Bool {
         sin.count == 9 && !digitsOnly(from: phone, maxCount: 20).isEmpty && !pin.isEmpty
+    }
+
+    private var sinValidationMessage: String? {
+        if !sin.isEmpty && sin.count != 9 {
+            return "SIN must be exactly 9 digits"
+        }
+        return nil
+    }
+
+    private var phoneValidationMessage: String? {
+        if !phone.isEmpty && digitsOnly(from: phone, maxCount: 20).count < 10 {
+            return "Phone number must be 10 digits"
+        }
+        return nil
+    }
+
+    private var pinValidationMessage: String? {
+        if !pin.isEmpty && pin.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return "PIN is required"
+        }
+        return nil
     }
 
     private var lastSubmittedLabel: String {

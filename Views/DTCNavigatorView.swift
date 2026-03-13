@@ -3,6 +3,7 @@ import SwiftUI
 struct DTCNavigatorView: View {
     private let totalSteps = 12
 
+    @Environment(AppState.self) private var appState
     @State private var step = 1
     @State private var hasFormalDiagnosis = false
     @State private var conditionTypes: Set<ConditionType> = []
@@ -64,14 +65,14 @@ struct DTCNavigatorView: View {
             switch step {
             case 1:
                 yesNoQuestion(
-                    title: "Has formal diagnosis?",
+                    title: "Do you have a formal medical diagnosis?",
                     value: $hasFormalDiagnosis
                 )
             case 2:
                 conditionTypeQuestion
             case 3:
                 sliderQuestion(
-                    title: "Daily activities restricted?",
+                    title: "How restricted are your daily activities?",
                     subtitle: "0 = not restricted, 10 = severely restricted",
                     value: $dailyRestrictionLevel,
                     range: 0...10,
@@ -80,42 +81,42 @@ struct DTCNavigatorView: View {
                 )
             case 4:
                 yesNoQuestion(
-                    title: "Need assistance with self-care?",
+                    title: "Do you need assistance with daily self-care tasks?",
                     value: $needsSelfCareAssistance
                 )
             case 5:
                 yesNoQuestion(
-                    title: "Mobility limitations?",
+                    title: "Do you experience mobility limitations?",
                     value: $hasMobilityLimitations
                 )
             case 6:
                 yesNoQuestion(
-                    title: "Vision impairment?",
+                    title: "Do you have a vision impairment?",
                     value: $hasVisionImpairment
                 )
             case 7:
                 yesNoQuestion(
-                    title: "Hearing impairment?",
+                    title: "Do you have a hearing impairment?",
                     value: $hasHearingImpairment
                 )
             case 8:
                 yesNoQuestion(
-                    title: "Speech difficulties?",
+                    title: "Do you experience speech difficulties?",
                     value: $hasSpeechDifficulties
                 )
             case 9:
                 yesNoQuestion(
-                    title: "Learning disabilities?",
+                    title: "Do you have a learning disability?",
                     value: $hasLearningDisabilities
                 )
             case 10:
                 yesNoQuestion(
-                    title: "Mental functions affected?",
+                    title: "Are your mental functions affected?",
                     value: $hasMentalFunctionImpact
                 )
             case 11:
                 sliderQuestion(
-                    title: "Work capacity reduced?",
+                    title: "How much is your work capacity reduced?",
                     subtitle: "Estimated % reduction in your ability to work",
                     value: $workCapacityReduction,
                     range: 0...100,
@@ -124,12 +125,12 @@ struct DTCNavigatorView: View {
                 )
             default:
                 yesNoQuestion(
-                    title: "Monthly income under $2000?",
+                    title: "Is your monthly income under 2000 dollars?",
                     value: $incomeUnderTwoThousand
                 )
             }
         }
-        .transition(.opacity.combined(with: .move(edge: .trailing)))
+        .transition(.asymmetric(insertion: .move(edge: .trailing), removal: .move(edge: .leading)))
     }
 
     private var conditionTypeQuestion: some View {
@@ -268,8 +269,16 @@ struct DTCNavigatorView: View {
                             .foregroundStyle(.secondary)
                     } else {
                         ForEach(recommendedPrograms, id: \.self) { program in
-                            Text("-- \(program)")
-                                .frame(maxWidth: .infinity, alignment: .leading)
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text("-- \(program)")
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                                if let url = learnMoreURL(for: program) {
+                                    Link("Learn More", destination: url)
+                                        .font(.subheadline.weight(.semibold))
+                                        .foregroundStyle(Color.appleBlue)
+                                }
+                            }
                         }
                     }
                 }
@@ -299,6 +308,11 @@ struct DTCNavigatorView: View {
                     }
                 }
                 .buttonStyle(.bordered)
+            }
+            .padding(20)
+            .overlay {
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .stroke(resultBorderColor, lineWidth: 2)
             }
             .padding(.vertical, 6)
         }
@@ -364,6 +378,23 @@ struct DTCNavigatorView: View {
         return built
     }
 
+    private var resultBorderColor: Color {
+        if dtcScore >= 0.7 { return .gradeGreen }
+        if dtcScore >= 0.4 { return .gradeAmber }
+        return .gradeRed
+    }
+
+    private func learnMoreURL(for program: String) -> URL? {
+        switch program {
+        case "Disability Tax Credit":
+            return URL(string: "https://www.canada.ca/en/revenue-agency/services/tax/individuals/segments/tax-credits-deductions-persons-disabilities/disability-tax-credit.html")
+        case "PWD Benefit":
+            return URL(string: "https://www2.gov.bc.ca/gov/content/family-social-supports/services-for-people-with-disabilities/disability-assistance")
+        default:
+            return nil
+        }
+    }
+
     private var flags: [ScreenFlag] {
         guard let details = result?.details else { return [] }
 
@@ -413,7 +444,9 @@ struct DTCNavigatorView: View {
         )
 
         do {
-            result = try await APIClient.shared.dtcScreen(request)
+            let screenResult = try await APIClient.shared.dtcScreen(request)
+            result = screenResult
+            appState.dtcScreenResult = screenResult
             errorMessage = nil
         } catch {
             errorMessage = error.localizedDescription
@@ -475,4 +508,5 @@ private struct FlowLayout<Data: RandomAccessCollection, Content: View>: View whe
     NavigationStack {
         DTCNavigatorView()
     }
+    .environment(AppState())
 }

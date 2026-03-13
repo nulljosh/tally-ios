@@ -192,6 +192,8 @@ private struct DashboardScreen: View {
 
                 paymentCard
 
+                Spacer()
+
                 dateCard
 
                 Spacer()

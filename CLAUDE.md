@@ -14,7 +14,7 @@ iOS companion for [Tally](https://github.com/nulljosh/tally). BC benefits tracke
 
 ## Roadmap
 - [x] Auth: BC Self-Serve login
-- [x] Dashboard: payment amount, countdown, status
+- [x] Dashboard: full-height layout, payment amount, countdown, status
 - [x] Monthly reports: view status, submit
 - [x] DTC Navigator integration
 - [x] Offline caching with instant launch

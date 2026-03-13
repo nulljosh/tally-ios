@@ -185,19 +185,29 @@ private struct DashboardScreen: View {
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 18) {
-                if appState.isOffline {
-                    OfflineBanner()
-                }
+            GeometryReader { geo in
+                VStack(spacing: 18) {
+                    if appState.isOffline {
+                        OfflineBanner()
+                    }
 
-                paymentCard
-                dateCard
-                quickActions
-                if !appState.statusMessages.isEmpty {
-                    messagesCard
+                    paymentCard
+
+                    Spacer(minLength: 0)
+
+                    dateCard
+
+                    Spacer(minLength: 0)
+
+                    quickActions
+
+                    if !appState.statusMessages.isEmpty {
+                        messagesCard
+                    }
                 }
+                .frame(minHeight: geo.size.height)
+                .padding()
             }
-            .padding()
         }
         .refreshable {
             await appState.refreshDashboard()
@@ -232,12 +242,12 @@ private struct DashboardScreen: View {
     }
 
     private var paymentCard: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 8) {
             Text("Payment Amount")
                 .sectionLabel()
 
             Text(appState.paymentAmountText)
-                .font(.system(size: 48, weight: .bold))
+                .font(.system(size: 54, weight: .bold))
                 .foregroundStyle(Color.appleBlue)
                 .minimumScaleFactor(0.7)
                 .lineLimit(1)
@@ -283,7 +293,7 @@ private struct DashboardScreen: View {
                     .font(.caption.weight(.medium))
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 14)
+            .padding(.vertical, 18)
             .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
             .foregroundStyle(Color.appleBlue)
         }

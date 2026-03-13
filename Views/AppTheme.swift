@@ -31,7 +31,8 @@ private let cardShape = RoundedRectangle(cornerRadius: 22, style: .continuous)
 struct GlassCard: ViewModifier {
     func body(content: Content) -> some View {
         content
-            .padding(20)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 24)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(.ultraThinMaterial, in: cardShape)
             .shadow(color: .black.opacity(0.06), radius: 12, y: 4)
@@ -41,7 +42,8 @@ struct GlassCard: ViewModifier {
 struct AccentGlassCard: ViewModifier {
     func body(content: Content) -> some View {
         content
-            .padding(20)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 24)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background {
                 cardShape.fill(.ultraThinMaterial)

@@ -15,7 +15,7 @@ iOS companion for [Tally](https://github.com/nulljosh/tally), the BC benefits tr
 ## Features
 
 - [x] Auth: BC Self-Serve login with 2-hour session management
-- [x] Dashboard: payment amount (monospaced), countdown to 25th, status, benefit type
+- [x] Dashboard: full-height layout, payment amount, countdown to 25th, status, benefit type
 - [x] Messages: inbox from BC Self-Serve
 - [x] Reports: view report table data, submit monthly report
 - [x] Settings: refresh data (triggers Puppeteer scrape), clear cache, sign out

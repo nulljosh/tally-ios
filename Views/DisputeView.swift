@@ -34,17 +34,14 @@ struct DisputeView: View {
     @State private var state = DisputeAnalysisState()
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: 16) {
-                    descriptionSection
-                    actionSection
-                    statusSection
-                    resultsSection
-                }
-                .padding()
+        ScrollView {
+            VStack(spacing: 16) {
+                descriptionSection
+                actionSection
+                statusSection
+                resultsSection
             }
-            .navigationTitle("Dispute")
+            .padding()
         }
     }
 

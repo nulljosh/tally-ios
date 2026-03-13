@@ -70,10 +70,6 @@ final class APIClient: @unchecked Sendable {
         return try await send(path: "api/mobile", responseType: DashboardData.self)
     }
 
-    func grades() async throws -> SchoolGradesResponse {
-        try await send(path: "api/mobile/grades", responseType: SchoolGradesResponse.self)
-    }
-
     func analyzeLegal(description: String) async throws -> LegalAnalysis {
         try await send(
             path: "api/legal",
@@ -89,6 +85,32 @@ final class APIClient: @unchecked Sendable {
             method: "POST",
             body: requestBody,
             responseType: DTCScreenResult.self
+        )
+    }
+
+    func getCraProfile() async throws -> CRAProfile {
+        try await send(path: "api/cra/profile", responseType: CRAProfile.self)
+    }
+
+    func saveCraProfile(_ profile: CRAProfile) async throws -> CRAProfile {
+        try await send(
+            path: "api/cra/profile",
+            method: "POST",
+            body: profile,
+            responseType: CRAProfile.self
+        )
+    }
+
+    func getCraTasks() async throws -> [CRATask] {
+        try await send(path: "api/cra/tasks", responseType: [CRATask].self)
+    }
+
+    func prepareDtcDraft(_ draft: DTCDraftRequest) async throws -> DTCDraftResponse {
+        try await send(
+            path: "api/cra/dtc-draft",
+            method: "POST",
+            body: draft,
+            responseType: DTCDraftResponse.self
         )
     }
 

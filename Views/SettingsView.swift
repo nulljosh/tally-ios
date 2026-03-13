@@ -14,8 +14,11 @@ struct SettingsView: View {
     var body: some View {
         Form {
             Section("Account") {
-                LabeledContent("Email", value: "Signed in via BC Self-Serve")
-                LabeledContent("Plan", value: "Standard")
+                LabeledContent("Username", value: appState.username ?? "--")
+                LabeledContent("Session", value: appState.isAuthenticated ? "Active" : "Inactive")
+                if let syncDate = appState.lastSyncDate {
+                    LabeledContent("Last Sync", value: syncDate.formatted(date: .abbreviated, time: .shortened))
+                }
             }
 
             Section("Appearance") {
@@ -80,7 +83,7 @@ struct SettingsView: View {
                 appState.clearAllCachedData()
             }
         } message: {
-            Text("This removes cached dashboard and grades data from this device.")
+            Text("This removes cached dashboard data from this device.")
         }
         .alert("Clear All Local Data", isPresented: $showClearDataAlert) {
             Button("Cancel", role: .cancel) {}

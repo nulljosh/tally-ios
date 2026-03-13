@@ -45,54 +45,36 @@ private struct AuthenticatedTabShell: View {
         )) {
             DashboardScreen()
                 .tabItem {
-                    Label("Dashboard", systemImage: "house")
+                    Label("Home", systemImage: "house")
                 }
                 .tag(0)
 
-            GradesView()
+            BenefitsView()
                 .tabItem {
-                    Label("Grades", systemImage: "graduationcap")
+                    Label("Benefits", systemImage: "accessibility")
                 }
                 .tag(1)
-
-            DTCNavigatorView()
-                .tabItem {
-                    Label("DTC", systemImage: "accessibility")
-                }
-                .tag(2)
-
-            CRAView()
-                .tabItem {
-                    Label("CRA", systemImage: "dollarsign.circle")
-                }
-                .tag(3)
 
             ReportView()
                 .tabItem {
                     Label("Reports", systemImage: "doc.text")
                 }
-                .tag(4)
-
-            DisputeView()
-                .tabItem {
-                    Label("Dispute", systemImage: "scale.3d")
-                }
-                .tag(5)
-
-            SettingsView()
-                .tabItem {
-                    Label("Settings", systemImage: "gearshape")
-                }
-                .tag(7)
+                .tag(2)
 
             if !appState.statusMessageItems.isEmpty {
                 MessagesView()
                     .tabItem {
                         Label("Messages", systemImage: "envelope")
                     }
-                    .tag(6)
+                    .tag(3)
                     .badge(appState.statusMessageItems.count)
             }
+
+            SettingsView()
+                .tabItem {
+                    Label("Settings", systemImage: "gearshape")
+                }
+                .tag(4)
         }
         .tint(.appleBlue)
     }
@@ -210,6 +192,7 @@ private struct DashboardScreen: View {
 
                 paymentCard
                 dateCard
+                quickActions
                 if !appState.statusMessages.isEmpty {
                     messagesCard
                 }
@@ -222,7 +205,7 @@ private struct DashboardScreen: View {
         .task {
             await appState.loadDashboardIfNeeded()
         }
-        .navigationTitle("Dashboard")
+        .navigationTitle("Home")
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
@@ -264,25 +247,46 @@ private struct DashboardScreen: View {
     }
 
     private var dateCard: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Next Payment")
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(.secondary)
-                    .textCase(.uppercase)
-                    .kerning(0.5)
+        VStack(spacing: 12) {
+            PaymentCalendarView(paymentDate: appState.parsedNextPaymentDate)
 
+            HStack {
                 Text(appState.nextPaymentDateText)
-                    .font(.title3.weight(.semibold))
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+
+                Spacer()
+
+                Text(appState.countdownText)
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(Color.appleBlue)
             }
-
-            Spacer()
-
-            Text(appState.countdownText)
-                .font(.title2.weight(.bold))
-                .foregroundStyle(Color.appleBlue)
         }
         .glassCard()
+    }
+
+    private var quickActions: some View {
+        HStack(spacing: 12) {
+            quickActionButton(title: "Submit Report", icon: "doc.text", tab: 2)
+            quickActionButton(title: "Benefits", icon: "accessibility", tab: 1)
+        }
+    }
+
+    private func quickActionButton(title: String, icon: String, tab: Int) -> some View {
+        Button {
+            appState.selectedTabIndex = tab
+        } label: {
+            VStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.title3)
+                Text(title)
+                    .font(.caption.weight(.medium))
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 14)
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .foregroundStyle(Color.appleBlue)
+        }
     }
 
     private var messagesCard: some View {

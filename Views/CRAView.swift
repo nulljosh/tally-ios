@@ -2,58 +2,65 @@ import SwiftUI
 
 struct CRAView: View {
     @Environment(AppState.self) private var appState
+    @State private var profile: CRAProfile?
+    @State private var tasks: [CRATask] = []
+    @State private var draftResponse: DTCDraftResponse?
+    @State private var isLoadingProfile = false
+    @State private var isLoadingTasks = false
+    @State private var isPreparingDraft = false
+    @State private var errorMessage: String?
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
-                header
                 profileSection
-                checklistSection
+                taskSection
                 summaryCard
-                startScreenerButton
+                dtcDraftSection
             }
             .padding()
         }
-        .navigationTitle("CRA")
-    }
-
-    private var header: some View {
-        HStack(spacing: 12) {
-            Image(systemName: "leaf.fill")
-                .font(.largeTitle.weight(.bold))
-                .foregroundStyle(Color.gradeGreen)
-
-            Text("CRA Tax Credits")
-                .font(.largeTitle.weight(.bold))
+        .task {
+            await loadData()
         }
     }
 
     private var profileSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Profile")
+            Text("CRA Profile")
                 .sectionLabel()
 
             VStack(alignment: .leading, spacing: 8) {
-                profileRow(label: "Name", value: "Account Holder")
-                profileRow(label: "SIN", value: "***-***-XXX")
+                profileRow(label: "Name", value: profile?.name ?? "Account Holder")
+                profileRow(label: "Sign-in", value: profile?.signInMethod ?? "--")
+                profileRow(label: "Tax Year", value: profile?.taxYear.map(String.init) ?? "--")
                 profileRow(label: "Filing Status", value: "Active")
             }
         }
         .glassCard()
     }
 
-    private var checklistSection: some View {
+    private var taskSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("CRA Checklist")
+            Text("Tasks")
                 .sectionLabel()
 
-            checklistItem(
-                text: "Complete DTC screener",
-                isChecked: appState.dtcScreenResult != nil
-            )
-            checklistItem(text: "Gather medical documentation", isChecked: false)
-            checklistItem(text: "File T2201 form", isChecked: false)
-            checklistItem(text: "Submit to CRA", isChecked: false)
+            if tasks.isEmpty {
+                checklistItem(
+                    text: "Complete DTC screener",
+                    isChecked: appState.dtcScreenResult != nil
+                )
+                checklistItem(text: "Gather medical documentation", isChecked: false)
+                checklistItem(text: "File T2201 form", isChecked: false)
+                checklistItem(text: "Submit to CRA", isChecked: false)
+            } else {
+                ForEach(tasks) { task in
+                    checklistItem(
+                        text: task.title,
+                        isChecked: task.status == "completed"
+                    )
+                }
+            }
         }
         .glassCard()
     }
@@ -75,22 +82,57 @@ struct CRAView: View {
         .accentGlassCard()
     }
 
-    private var startScreenerButton: some View {
-        Button("Start DTC Screener") {
-            appState.selectedTabIndex = 2
+    @ViewBuilder
+    private var dtcDraftSection: some View {
+        if appState.dtcScreenResult != nil {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("T2201 Draft")
+                    .sectionLabel()
+
+                if let draftResponse, let draft = draftResponse.draft {
+                    Text(draft)
+                        .font(.subheadline)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                } else if let message = draftResponse?.message {
+                    Text(message)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+
+                Button {
+                    Task { await prepareDraft() }
+                } label: {
+                    HStack {
+                        if isPreparingDraft {
+                            ProgressView()
+                                .tint(.white)
+                        }
+                        Text(draftResponse == nil ? "Prepare Draft" : "Refresh Draft")
+                            .fontWeight(.semibold)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(Color.appleBlue, in: RoundedRectangle(cornerRadius: 12))
+                    .foregroundStyle(.white)
+                }
+                .disabled(isPreparingDraft)
+                .opacity(isPreparingDraft ? 0.6 : 1)
+            }
+            .glassCard()
         }
-        .buttonStyle(.borderedProminent)
-        .tint(.appleBlue)
-        .frame(maxWidth: .infinity)
+
+        if let errorMessage {
+            Text(errorMessage)
+                .font(.caption)
+                .foregroundStyle(Color.gradeRed)
+        }
     }
 
     private func profileRow(label: String, value: String) -> some View {
         HStack {
             Text(label)
                 .foregroundStyle(.secondary)
-
             Spacer()
-
             Text(value)
                 .fontWeight(.medium)
         }
@@ -100,10 +142,46 @@ struct CRAView: View {
         HStack(spacing: 10) {
             Image(systemName: isChecked ? "checkmark.square.fill" : "square")
                 .foregroundStyle(isChecked ? Color.gradeGreen : .secondary)
-
             Text(text)
-
             Spacer()
+        }
+    }
+
+    @MainActor
+    private func loadData() async {
+        isLoadingProfile = true
+        isLoadingTasks = true
+        defer {
+            isLoadingProfile = false
+            isLoadingTasks = false
+        }
+
+        do {
+            async let profileResult = APIClient.shared.getCraProfile()
+            async let tasksResult = APIClient.shared.getCraTasks()
+            profile = try await profileResult
+            tasks = try await tasksResult
+        } catch {
+            // Non-critical: CRA endpoints may not exist yet
+            errorMessage = nil
+        }
+    }
+
+    @MainActor
+    private func prepareDraft() async {
+        isPreparingDraft = true
+        defer { isPreparingDraft = false }
+
+        let request = DTCDraftRequest(
+            screenResult: appState.dtcScreenResult,
+            taxYear: Calendar.current.component(.year, from: Date())
+        )
+
+        do {
+            draftResponse = try await APIClient.shared.prepareDtcDraft(request)
+            errorMessage = nil
+        } catch {
+            errorMessage = error.localizedDescription
         }
     }
 }

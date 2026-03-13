@@ -8,7 +8,7 @@ import Observation
 final class AppState {
     private enum Constants {
         static let dashboardCacheKey = "cached-dashboard-data"
-        static let gradesCacheKey = "cached-grades-data"
+        static let lastSyncKey = "last-sync-date"
     }
 
     var isAuthenticated = false
@@ -16,20 +16,23 @@ final class AppState {
     var errorMessage: String?
     var dashboard: DashboardData?
     var isOffline = false
-    var cachedGrades: SchoolGradesResponse?
-    var lastGradesFetchDate: Date? = nil
     var selectedTabIndex: Int = 0
     var dtcScreenResult: DTCScreenResult? = nil
+    var lastSyncDate: Date? = nil
 
     private let monitor = NWPathMonitor()
     private let monitorQueue = DispatchQueue(label: "com.heyitsmejosh.tally.network")
 
     private var storedCredentials: KeychainHelper.Credentials?
 
+    var username: String? {
+        KeychainHelper.loadCredentials()?.username
+    }
+
     init() {
         startNetworkMonitoring()
         dashboard = Self.loadCached(DashboardData.self, forKey: Constants.dashboardCacheKey)
-        cachedGrades = Self.loadCached(SchoolGradesResponse.self, forKey: Constants.gradesCacheKey)
+        lastSyncDate = UserDefaults.standard.object(forKey: Constants.lastSyncKey) as? Date
         storedCredentials = KeychainHelper.loadCredentials()
     }
 
@@ -69,7 +72,7 @@ final class AppState {
         return "\(days) day\(days == 1 ? "" : "s")"
     }
 
-    private var parsedNextPaymentDate: Date? {
+    var parsedNextPaymentDate: Date? {
         guard let raw = dashboard?.nextPaymentDate, !raw.isEmpty else { return nil }
         return DateParsing.parse(raw)
     }
@@ -173,6 +176,7 @@ final class AppState {
             let latest = try await APIClient.shared.latest()
             dashboard = latest
             cacheDashboard(latest)
+            updateSyncDate()
             errorMessage = nil
         } catch {
             if let cached = dashboard {
@@ -193,6 +197,7 @@ final class AppState {
             let fresh = try await APIClient.shared.check()
             dashboard = fresh
             cacheDashboard(fresh)
+            updateSyncDate()
             errorMessage = nil
         } catch APIClientError.unauthorized {
             isAuthenticated = false
@@ -239,17 +244,17 @@ final class AppState {
         Self.cache(value, forKey: Constants.dashboardCacheKey)
     }
 
-    func cacheGrades(_ value: SchoolGradesResponse) {
-        cachedGrades = value
-        Self.cache(value, forKey: Constants.gradesCacheKey)
+    private func updateSyncDate() {
+        lastSyncDate = Date()
+        UserDefaults.standard.set(lastSyncDate, forKey: Constants.lastSyncKey)
     }
 
     func clearAllCachedData() {
         UserDefaults.standard.removeObject(forKey: Constants.dashboardCacheKey)
-        UserDefaults.standard.removeObject(forKey: Constants.gradesCacheKey)
+        UserDefaults.standard.removeObject(forKey: Constants.lastSyncKey)
         dashboard = nil
-        cachedGrades = nil
         dtcScreenResult = nil
+        lastSyncDate = nil
     }
 
     private static func cache<T: Encodable>(_ value: T, forKey key: String) {

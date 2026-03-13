@@ -35,7 +35,7 @@ struct DTCNavigatorView: View {
             }
         }
         .padding()
-        .navigationTitle("DTC Navigator")
+        // Title managed by BenefitsView
         .animation(.tallySpring, value: step)
         .animation(.tallySpring, value: result != nil)
     }
